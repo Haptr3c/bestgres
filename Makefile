@@ -1,7 +1,7 @@
 # Makefile for building and running the Kubernetes operator
 
 # Variables
-BINARY_NAME=manager
+BINARY_NAME=operator
 GO_FILES=$(shell find . -name '*.go')
 OUTPUT_DIR=bin
 
