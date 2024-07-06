@@ -32,7 +32,7 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 # Default target
-all: docker-build helm
+all: docker-build generate
 
 # Build the binary
 build: $(GO_FILES)
@@ -47,22 +47,36 @@ build-linux: $(GO_FILES)
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../../$(OUTPUT_DIR)/$(BINARY_NAME)-linux-amd64 main.go
 
 # Generate code
-generate:
+deepcopy:
 	@echo "Generating deepcopy code..."
-	controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./..."
+	controller-gen \
+	object:headerFile="hack/boilerplate.go.txt" \
+	paths="./..."
 
 # Generate manifests e.g. CRD, RBAC etc.
-manifests: generate
+manifests: deepcopy
 	@echo "Generating CRD manifests..."
-	controller-gen object:headerFile="hack/boilerplate.go.txt" crd paths=./api/... output:crd:artifacts:config=config/crd/bases
+	controller-gen \
+		object:headerFile="hack/boilerplate.go.txt" \
+		crd \
+		paths=./api/... \
+		output:crd:artifacts:config=deploy/helm/bestgres-operator/crds
+
+# Generate RBAC manifests
+rbac: deepcopy
+	@echo "Generating RBAC manifests..."
+	controller-gen \
+		rbac:roleName=bestgres-operator \
+		paths=./controllers/... \
+		output:rbac:artifacts:config=deploy/helm/bestgres-operator/templates
 
 # Generate helm charts
 helm: manifests
-	@echo "Generating Helm charts..."
-	# Move the CRD to the helm chart
-	cp config/crd/bases/* deploy/helm/bestgres-operator/crds/
-	# Edit the appVersion to match TAG
+	@echo "Updating Helm chart version..."
 	sed -i '' 's/appVersion: .*/appVersion: $(TAG)/' deploy/helm/bestgres-operator/Chart.yaml
+
+# Generate all manifests (CRD, RBAC, etc.)
+generate: deepcopy manifests rbac helm
 
 # Run tests
 test: $(GO_FILES)

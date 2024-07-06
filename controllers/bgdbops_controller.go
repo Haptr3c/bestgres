@@ -24,10 +24,10 @@ type BGDbOpsReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=bestgres.io,resources=bgdbops,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=bestgres.io,resources=bgdbops/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=bestgres.io,resources=bgdbops/finalizers,verbs=update
-//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=bestgres.io,resources=bgdbops,verbs=get;list;watch;create;update;patch;delete,namespace="{{ .Release.Namespace }}"
+//+kubebuilder:rbac:groups=bestgres.io,resources=bgdbops/status,verbs=get;update;patch,namespace="{{ .Release.Namespace }}"
+//+kubebuilder:rbac:groups=bestgres.io,resources=bgdbops/finalizers,verbs=update,namespace="{{ .Release.Namespace }}"
+//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;update;patch,namespace="{{ .Release.Namespace }}"
 
 func (r *BGDbOpsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log, _ := logr.FromContext(ctx)

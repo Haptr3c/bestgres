@@ -25,6 +25,11 @@ type BGClusterReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+//+kubebuilder:rbac:groups=bestgres.io,resources=bgclusters,verbs=get;list;watch;create;update;patch;delete,namespace="{{ .Release.Namespace }}"
+//+kubebuilder:rbac:groups=bestgres.io,resources=bgclusters/status,verbs=get;update;patch,namespace="{{ .Release.Namespace }}"
+//+kubebuilder:rbac:groups=bestgres.io,resources=bgclusters/finalizers,verbs=update,namespace="{{ .Release.Namespace }}"
+//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;delete;update;patch,namespace="{{ .Release.Namespace }}"
+
 func (r *BGClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log, _ := logr.FromContext(ctx)
 
