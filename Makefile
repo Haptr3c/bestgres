@@ -1,16 +1,18 @@
 # Makefile for building and running the Kubernetes operator
 
 # Variables
+# Binary
 BINARY_NAME=operator
 GO_FILES=$(shell find . -name '*.go')
 OUTPUT_DIR=bin
 
+# Docker
 DOCKER_IMAGE=bestgres/operator
 # Generate a tag based on the current git sha
 GIT_SHA := $(shell git rev-parse --short HEAD)
 TAG := dev-$(GIT_SHA)
 
-# Default build platform
+# Build platform
 BUILDPLATFORM = linux/amd64
 GOOS = linux
 GOARCH = amd64
@@ -29,8 +31,6 @@ ifeq ($(UNAME_S),Darwin)
     endif
 endif
 
-
-
 # Default target
 all: docker-build
 
@@ -45,6 +45,16 @@ build-linux: $(GO_FILES)
 	mkdir -p $(OUTPUT_DIR)
 	cd cmd/operator && \
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../../$(OUTPUT_DIR)/$(BINARY_NAME)-linux-amd64 main.go
+
+# Generate code
+generate:
+	@echo "Generating deepcopy code..."
+	controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./..."
+
+# Generate manifests e.g. CRD, RBAC etc.
+manifests: generate
+	@echo "Generating CRD manifests..."
+	controller-gen object:headerFile="hack/boilerplate.go.txt" crd paths=./api/... output:crd:artifacts:config=config/crd/bases
 
 # Run tests
 test: $(GO_FILES)

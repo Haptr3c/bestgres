@@ -6,21 +6,44 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:path=bgdbops,scope=Namespaced
+// +groupName=bestgres.io
+
+// BGDbOps is the Schema for the bgdbops API
+type BGDbOps struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   BGDbOpsSpec   `json:"spec,omitempty"`
+	Status BGDbOpsStatus `json:"status,omitempty"`
+}
+
 // BGDbOpsSpec defines the desired state of BGDbOps
 type BGDbOpsSpec struct {
 	// Reference to the BGCluster
+	// +kubebuilder:validation:Required
 	BGCluster string `json:"bgCluster"`
 	// Operation to perform (e.g., benchmark, repack, restart, vacuum)
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Enum=benchmark;repack;restart;vacuum
 	Op string `json:"op"`
 	// Maximum number of retries for the operation
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default=3
 	MaxRetries int `json:"maxRetries,omitempty"`
 	// Benchmark operation details
+	// +kubebuilder:validation:Optional
 	Benchmark *BenchmarkSpec `json:"benchmark,omitempty"`
 	// Repack operation details
+	// +kubebuilder:validation:Optional
 	Repack *RepackSpec `json:"repack,omitempty"`
 	// Restart operation details
+	// +kubebuilder:validation:Optional
 	Restart *RestartSpec `json:"restart,omitempty"`
 	// Vacuum operation details
+	// +kubebuilder:validation:Optional
 	Vacuum *VacuumSpec `json:"vacuum,omitempty"`
 }
 
@@ -74,17 +97,24 @@ func (in *VacuumSpec) DeepCopyInto(out *VacuumSpec) {
 
 // BenchmarkSpec defines the details for a benchmark operation
 type BenchmarkSpec struct {
-	Type           string      `json:"type"`
-	PgBench        PgBenchSpec `json:"pgbench"`
-	ConnectionType string      `json:"connectionType"`
+	// +kubebuilder:validation:Required
+	Type string `json:"type"`
+	// +kubebuilder:validation:Required
+	PgBench PgBenchSpec `json:"pgbench"`
+	// +kubebuilder:validation:Required
+	ConnectionType string `json:"connectionType"`
 }
 
 // PgBenchSpec defines the details for a pgbench benchmark
 type PgBenchSpec struct {
-	DatabaseSize      string `json:"databaseSize"`
-	Duration          string `json:"duration"`
-	ConcurrentClients int    `json:"concurrentClients"`
-	Threads           int    `json:"threads"`
+	// +kubebuilder:validation:Required
+	DatabaseSize string `json:"databaseSize"`
+	// +kubebuilder:validation:Required
+	Duration string `json:"duration"`
+	// +kubebuilder:validation:Minimum=1
+	ConcurrentClients int `json:"concurrentClients"`
+	// +kubebuilder:validation:Minimum=1
+	Threads int `json:"threads"`
 }
 
 // RepackSpec defines the details for a repack operation
@@ -107,6 +137,7 @@ type BGDbOpsStatus struct {
 	// Status of the operation
 	Status string `json:"status"`
 	// Number of retries performed
+	// +kubebuilder:validation:Minimum=0
 	Retries int `json:"retries"`
 }
 
@@ -114,19 +145,7 @@ func (in *BGDbOpsStatus) DeepCopyInto(out *BGDbOpsStatus) {
     *out = *in
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-
-// BGDbOps is the Schema for the bgdbops API
-type BGDbOps struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   BGDbOpsSpec   `json:"spec,omitempty"`
-	Status BGDbOpsStatus `json:"status,omitempty"`
-}
-
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // BGDbOpsList contains a list of BGDbOps
 type BGDbOpsList struct {

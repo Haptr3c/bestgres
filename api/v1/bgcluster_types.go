@@ -6,15 +6,36 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:path=bgclusters,scope=Namespaced,shortName=bgclu
+// +groupName=bestgres.io
+
+// BGCluster is the Schema for the bgclusters API
+type BGCluster struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   BGClusterSpec   `json:"spec,omitempty"`
+	Status BGClusterStatus `json:"status,omitempty"`
+}
+
 // BGClusterSpec defines the desired state of BGCluster
 type BGClusterSpec struct {
-	Version              string `json:"version"`
-	Instances            int32  `json:"instances"`
+	// +kubebuilder:validation:Required
+	Version string `json:"version"`
+	// +kubebuilder:validation:Required
+	Instances int32 `json:"instances"`
+	// +kubebuilder:validation:Required
 	PersistentVolumeSize string `json:"persistentVolumeSize"`
-	StorageClass         string `json:"storageClass"`
-	SuperuserPassword    string `json:"superuserPassword"`
-	ReplicationPassword  string `json:"replicationPassword"`
-	PatroniImage         string `json:"patroniImage"`
+	// +kubebuilder:validation:Required
+	StorageClass string `json:"storageClass"`
+	// +kubebuilder:validation:Required
+	SuperuserPassword string `json:"superuserPassword"`
+	// +kubebuilder:validation:Required
+	ReplicationPassword string `json:"replicationPassword"`
+	// +kubebuilder:validation:Required
+	PatroniImage string `json:"patroniImage"`
 }
 
 // BGClusterStatus defines the observed state of BGCluster
@@ -42,19 +63,7 @@ func (in *BGClusterStatus) DeepCopy() *BGClusterStatus {
 	return out
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-
-// BGCluster is the Schema for the bgclusters API
-type BGCluster struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   BGClusterSpec   `json:"spec,omitempty"`
-	Status BGClusterStatus `json:"status,omitempty"`
-}
-
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // BGClusterList contains a list of BGCluster
 type BGClusterList struct {
