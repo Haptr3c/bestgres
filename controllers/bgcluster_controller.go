@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"reflect"
 
-	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -21,82 +20,80 @@ import (
 
 // BGClusterReconciler reconciles a BGCluster object
 type BGClusterReconciler struct {
-	client.Client
-	Scheme *runtime.Scheme
+    client.Client
+    Scheme *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=bestgres.io,resources=bgclusters,verbs=get;list;watch;create;update;patch;delete,namespace="{{ .Release.Namespace }}"
 //+kubebuilder:rbac:groups=bestgres.io,resources=bgclusters/status,verbs=get;update;patch,namespace="{{ .Release.Namespace }}"
 //+kubebuilder:rbac:groups=bestgres.io,resources=bgclusters/finalizers,verbs=update,namespace="{{ .Release.Namespace }}"
-//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;delete;update;patch,namespace="{{ .Release.Namespace }}"
+//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete,namespace="{{ .Release.Namespace }}"
+//+kubebuilder:rbac:groups=core,resources=services;endpoints;secrets;serviceaccounts,verbs=get;list;watch;create;update;patch;delete,namespace="{{ .Release.Namespace }}"
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch;create;update;patch;delete,namespace="{{ .Release.Namespace }}"
 
 func (r *BGClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log, _ := logr.FromContext(ctx)
+    log := ctrl.LoggerFrom(ctx)
 
-	bgCluster := &bestgresv1.BGCluster{}
-	err := r.Get(ctx, req.NamespacedName, bgCluster)
-	if err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
+    bgCluster := &bestgresv1.BGCluster{}
+    err := r.Get(ctx, req.NamespacedName, bgCluster)
+    if err != nil {
+        return ctrl.Result{}, client.IgnoreNotFound(err)
+    }
 
-	// Create or update resources
-	if err := r.reconcileHeadlessService(ctx, bgCluster); err != nil {
-		return ctrl.Result{}, err
-	}
-	if err := r.reconcileStatefulSet(ctx, bgCluster); err != nil {
-		return ctrl.Result{}, err
-	}
-	if err := r.reconcileEndpoints(ctx, bgCluster); err != nil {
-		return ctrl.Result{}, err
-	}
-	if err := r.reconcileService(ctx, bgCluster); err != nil {
-		return ctrl.Result{}, err
-	}
-	if err := r.reconcileReplicaService(ctx, bgCluster); err != nil {
-		return ctrl.Result{}, err
-	}
-	if err := r.reconcileSecret(ctx, bgCluster); err != nil {
-		return ctrl.Result{}, err
-	}
-	if err := r.reconcileServiceAccount(ctx, bgCluster); err != nil {
-		return ctrl.Result{}, err
-	}
-	if err := r.reconcileRole(ctx, bgCluster); err != nil {
-		return ctrl.Result{}, err
-	}
-	if err := r.reconcileRoleBinding(ctx, bgCluster); err != nil {
-		return ctrl.Result{}, err
-	}
-	if err := r.reconcileClusterRole(ctx, bgCluster); err != nil {
-		return ctrl.Result{}, err
-	}
-	if err := r.reconcileClusterRoleBinding(ctx, bgCluster); err != nil {
-		return ctrl.Result{}, err
-	}
+    // Create or update resources
+    if err := r.reconcileHeadlessService(ctx, bgCluster); err != nil {
+        return ctrl.Result{}, err
+    }
+    if err := r.reconcileStatefulSet(ctx, bgCluster); err != nil {
+        return ctrl.Result{}, err
+    }
+    if err := r.reconcileEndpoints(ctx, bgCluster); err != nil {
+        return ctrl.Result{}, err
+    }
+    if err := r.reconcileService(ctx, bgCluster); err != nil {
+        return ctrl.Result{}, err
+    }
+    if err := r.reconcileReplicaService(ctx, bgCluster); err != nil {
+        return ctrl.Result{}, err
+    }
+    if err := r.reconcileSecret(ctx, bgCluster); err != nil {
+        return ctrl.Result{}, err
+    }
+    if err := r.reconcileServiceAccount(ctx, bgCluster); err != nil {
+        return ctrl.Result{}, err
+    }
+    if err := r.reconcileRole(ctx, bgCluster); err != nil {
+        return ctrl.Result{}, err
+    }
+    if err := r.reconcileRoleBinding(ctx, bgCluster); err != nil {
+        return ctrl.Result{}, err
+    }
 
-	// Update status
-	podList := &corev1.PodList{}
-	listOpts := []client.ListOption{
-		client.InNamespace(bgCluster.Namespace),
-		client.MatchingLabels(labelsForBGCluster(bgCluster.Name)),
-	}
-	if err = r.List(ctx, podList, listOpts...); err != nil {
-		log.Error(err, "Failed to list pods", "BGCluster.Namespace", bgCluster.Namespace, "BGCluster.Name", bgCluster.Name)
-		return ctrl.Result{}, err
-	}
-	podNames := getPodNames(podList.Items)
+    // Update status
+    podList := &corev1.PodList{}
+    listOpts := []client.ListOption{
+        client.InNamespace(bgCluster.Namespace),
+        client.MatchingLabels(labelsForBGCluster(bgCluster.Name)),
+    }
+    if err = r.List(ctx, podList, listOpts...); err != nil {
+        log.Error(err, "Failed to list pods", "BGCluster.Namespace", bgCluster.Namespace, "BGCluster.Name", bgCluster.Name)
+        return ctrl.Result{}, err
+    }
+    podNames := getPodNames(podList.Items)
 
-	if !reflect.DeepEqual(podNames, bgCluster.Status.Nodes) {
-		bgCluster.Status.Nodes = podNames
-		err := r.Status().Update(ctx, bgCluster)
-		if err != nil {
-			log.Error(err, "Failed to update BGCluster status")
-			return ctrl.Result{}, err
-		}
-	}
+    if !reflect.DeepEqual(podNames, bgCluster.Status.Nodes) {
+        bgCluster.Status.Nodes = podNames
+        err := r.Status().Update(ctx, bgCluster)
+        if err != nil {
+            log.Error(err, "Failed to update BGCluster status")
+            return ctrl.Result{}, err
+        }
+    }
 
-	return ctrl.Result{}, nil
+    return ctrl.Result{}, nil
 }
+
+
 
 func (r *BGClusterReconciler) reconcileHeadlessService(ctx context.Context, bgCluster *bestgresv1.BGCluster) error {
 	svc := &corev1.Service{
@@ -279,115 +276,73 @@ func (r *BGClusterReconciler) reconcileSecret(ctx context.Context, bgCluster *be
 }
 
 func (r *BGClusterReconciler) reconcileServiceAccount(ctx context.Context, bgCluster *bestgresv1.BGCluster) error {
-	sa := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      bgCluster.Name,
-			Namespace: bgCluster.Namespace,
-		},
-	}
-	return ctrl.SetControllerReference(bgCluster, sa, r.Scheme)
+    sa := &corev1.ServiceAccount{
+        ObjectMeta: metav1.ObjectMeta{
+            Name:      bgCluster.Name,
+            Namespace: bgCluster.Namespace,
+        },
+    }
+    return ctrl.SetControllerReference(bgCluster, sa, r.Scheme)
 }
 
 func (r *BGClusterReconciler) reconcileRole(ctx context.Context, bgCluster *bestgresv1.BGCluster) error {
-	role := &rbacv1.Role{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      bgCluster.Name,
-			Namespace: bgCluster.Namespace,
-		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"configmaps"},
-				Verbs:     []string{"create", "get", "list", "patch", "update", "watch", "delete", "deletecollection"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"endpoints"},
-				Verbs:     []string{"create", "get", "list", "patch", "update", "watch", "delete", "deletecollection"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"pods"},
-				Verbs:     []string{"get", "list", "patch", "update", "watch"},
-			},
-		},
-	}
-	return ctrl.SetControllerReference(bgCluster, role, r.Scheme)
+    role := &rbacv1.Role{
+        ObjectMeta: metav1.ObjectMeta{
+            Name:      bgCluster.Name,
+            Namespace: bgCluster.Namespace,
+        },
+        Rules: []rbacv1.PolicyRule{
+            {
+                APIGroups: []string{""},
+                Resources: []string{"configmaps", "endpoints", "pods"},
+                Verbs:     []string{"create", "get", "list", "patch", "update", "watch", "delete"},
+            },
+            {
+                APIGroups: []string{""},
+                Resources: []string{"endpoints"},
+                ResourceNames: []string{"kubernetes"},
+                Verbs:     []string{"get"},
+            },
+        },
+    }
+    return ctrl.SetControllerReference(bgCluster, role, r.Scheme)
 }
 
 func (r *BGClusterReconciler) reconcileRoleBinding(ctx context.Context, bgCluster *bestgresv1.BGCluster) error {
-	roleBinding := &rbacv1.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      bgCluster.Name,
-			Namespace: bgCluster.Namespace,
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "Role",
-			Name:     bgCluster.Name,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      bgCluster.Name,
-				Namespace: bgCluster.Namespace,
-			},
-		},
-	}
-	return ctrl.SetControllerReference(bgCluster, roleBinding, r.Scheme)
-}
-
-func (r *BGClusterReconciler) reconcileClusterRole(ctx context.Context, bgCluster *bestgresv1.BGCluster) error {
-	clusterRole := &rbacv1.ClusterRole{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "patroni-" + bgCluster.Name + "-k8s-ep-access",
-		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups:     []string{""},
-				Resources:     []string{"endpoints"},
-				ResourceNames: []string{"kubernetes"},
-				Verbs:         []string{"get"},
-			},
-		},
-	}
-	return ctrl.SetControllerReference(bgCluster, clusterRole, r.Scheme)
-}
-
-func (r *BGClusterReconciler) reconcileClusterRoleBinding(ctx context.Context, bgCluster *bestgresv1.BGCluster) error {
-	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "patroni-" + bgCluster.Name + "-k8s-ep-access",
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "ClusterRole",
-			Name:     "patroni-" + bgCluster.Name + "-k8s-ep-access",
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      bgCluster.Name,
-				Namespace: bgCluster.Namespace,
-			},
-		},
-	}
-	return ctrl.SetControllerReference(bgCluster, clusterRoleBinding, r.Scheme)
+    roleBinding := &rbacv1.RoleBinding{
+        ObjectMeta: metav1.ObjectMeta{
+            Name:      bgCluster.Name,
+            Namespace: bgCluster.Namespace,
+        },
+        RoleRef: rbacv1.RoleRef{
+            APIGroup: "rbac.authorization.k8s.io",
+            Kind:     "Role",
+            Name:     bgCluster.Name,
+        },
+        Subjects: []rbacv1.Subject{
+            {
+                Kind:      "ServiceAccount",
+                Name:      bgCluster.Name,
+                Namespace: bgCluster.Namespace,
+            },
+        },
+    }
+    return ctrl.SetControllerReference(bgCluster, roleBinding, r.Scheme)
 }
 
 func labelsForBGCluster(name string) map[string]string {
-	return map[string]string{
-		"application":  "patroni",
-		"cluster-name": name,
-	}
+    return map[string]string{
+        "application":  "patroni",
+        "cluster-name": name,
+    }
 }
 
 func getPodNames(pods []corev1.Pod) []string {
-	var podNames []string
-	for _, pod := range pods {
-		podNames = append(podNames, pod.Name)
-	}
-	return podNames
+    var podNames []string
+    for _, pod := range pods {
+        podNames = append(podNames, pod.Name)
+    }
+    return podNames
 }
 
 func (r *BGClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -400,7 +355,5 @@ func (r *BGClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
         Owns(&corev1.ServiceAccount{}).
         Owns(&rbacv1.Role{}).
         Owns(&rbacv1.RoleBinding{}).
-        Owns(&rbacv1.ClusterRole{}).
-        Owns(&rbacv1.ClusterRoleBinding{}).
         Complete(r)
 }
