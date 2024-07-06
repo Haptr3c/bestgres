@@ -32,7 +32,7 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 # Default target
-all: docker-build
+all: docker-build helm
 
 # Build the binary
 build: $(GO_FILES)
@@ -55,6 +55,14 @@ generate:
 manifests: generate
 	@echo "Generating CRD manifests..."
 	controller-gen object:headerFile="hack/boilerplate.go.txt" crd paths=./api/... output:crd:artifacts:config=config/crd/bases
+
+# Generate helm charts
+helm: manifests
+	@echo "Generating Helm charts..."
+	# Move the CRD to the helm chart
+	cp config/crd/bases/* deploy/helm/bestgres-operator/crds/
+	# Edit the appVersion to match TAG
+	sed -i '' 's/appVersion: .*/appVersion: $(TAG)/' deploy/helm/bestgres-operator/Chart.yaml
 
 # Run tests
 test: $(GO_FILES)
