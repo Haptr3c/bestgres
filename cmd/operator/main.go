@@ -37,6 +37,19 @@ func init() {
 }
 
 func main() {
+	mode := os.Getenv("MODE")
+	switch mode {
+	case "operator":
+		runOperator()
+	case "init":
+		runInitContainer()
+	default:
+		setupLog.Error(fmt.Errorf("invalid MODE environment variable: %s", mode), "unable to determine operation mode")
+		os.Exit(1)
+	}
+}
+
+func runOperator() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
@@ -121,4 +134,10 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func runInitContainer() {
+	// This is a placeholder for the init container
+	println("This is the init container")
+	os.Exit(0)
 }
