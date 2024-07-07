@@ -44,8 +44,24 @@ spec:
               instances:
                 format: int32
                 type: integer
-              patroniImage:
-                type: string
+              patroni:
+                description: PatroniSpec defines the Patroni-specific configuration
+                properties:
+                  command:
+                    default:
+                    - /bin/sh
+                    - /entrypoint.sh
+                    items:
+                      type: string
+                    type: array
+                  image:
+                    type: string
+                  workingDir:
+                    default: /home/postgres
+                    type: string
+                required:
+                - image
+                type: object
               persistentVolumeSize:
                 type: string
               replicationPassword:
@@ -56,7 +72,7 @@ spec:
                 type: string
             required:
             - instances
-            - patroniImage
+            - patroni
             - persistentVolumeSize
             - replicationPassword
             - storageClass

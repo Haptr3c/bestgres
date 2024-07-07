@@ -8,4 +8,5 @@ spec:
   storageClass: "hostpath"
   superuserPassword: "password"
   replicationPassword: "replicapassword"
-  patroniImage: "patroni/patroni:3.3.1"
+  patroni:
+    image: "patroni/patroni:3.3.1"

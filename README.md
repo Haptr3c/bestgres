@@ -3,6 +3,7 @@
 - Minimal dependencies for security and simplicity
 - Uses vanila or user-supplied images and maintains full compatibility with upstream patroni
 - No Webhooks, pods/exec, cluster-scoped resources, or cluster-scoped permissions required
+- No root
 - Airgapped-ready
 - 
 
@@ -22,6 +23,7 @@ The core principles of the operator are:
 - Minimal dependencies for security and simplicity
 - Uses vanila or user-supplied images and maintains full compatibility with upstream patroni
 - No Webhooks, pods/exec, cluster-scoped resources, or cluster-scoped permissions required
+- No root
 - Airgapped-ready
 
 ```

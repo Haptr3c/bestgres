@@ -131,16 +131,21 @@ func (r *BGClusterReconciler) reconcileStatefulSet(ctx context.Context, bgCluste
 					Containers: []corev1.Container{
 						{
 							Name:            bgCluster.Name,
-							Image:           bgCluster.Spec.PatroniImage,
+							Image:           bgCluster.Spec.Patroni.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Ports: []corev1.ContainerPort{
 								{ContainerPort: 8008, Protocol: corev1.ProtocolTCP},
 								{ContainerPort: 5432, Protocol: corev1.ProtocolTCP},
 							},
+                            Command: []string{"/app/controller"},
 							VolumeMounts: []corev1.VolumeMount{
 								{Name: "pgdata", MountPath: "/home/postgres/pgdata"},
+								{Name: "controller", MountPath: "/app", },
 							},
 							Env: []corev1.EnvVar{
+                                {Name: "MODE", Value: "controller"},
+                                {Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"}}},
+                                {Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}},
 								{Name: "PATRONI_KUBERNETES_POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}}},
 								{Name: "PATRONI_KUBERNETES_NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}},
 								{Name: "PATRONI_KUBERNETES_BYPASS_API_SERVICE", Value: "true"},
@@ -182,7 +187,7 @@ func (r *BGClusterReconciler) reconcileStatefulSet(ctx context.Context, bgCluste
 								{ContainerPort: 8008, Protocol: corev1.ProtocolTCP},
 							},
 							VolumeMounts: []corev1.VolumeMount{
-								{Name: "controller-binary", MountPath: "/mnt/binary"},
+								{Name: "controller", MountPath: "/app"},
 							},
 							Env: []corev1.EnvVar{
 								{Name: "MODE", Value: "init"},
@@ -208,7 +213,7 @@ func (r *BGClusterReconciler) reconcileStatefulSet(ctx context.Context, bgCluste
 				},
                 {
                     ObjectMeta: metav1.ObjectMeta{
-                        Name: "controller-binary",
+                        Name: "controller",
                     },
                     Spec: corev1.PersistentVolumeClaimSpec{
                         AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
@@ -543,9 +548,15 @@ func (r *BGClusterReconciler) reconcileRole(ctx context.Context, bgCluster *best
                 Verbs:     []string{"create", "get", "list", "patch", "update", "watch", "delete"},
             },
             {
-                APIGroups: []string{""},
-                Resources: []string{"endpoints"},
-                ResourceNames: []string{"kubernetes"},
+                APIGroups: []string{"apps"},
+                Resources: []string{"statefulsets"},
+                ResourceNames: []string{bgCluster.Name},
+                Verbs:     []string{"get"},
+            },
+            {
+                APIGroups: []string{"bestgres.io"},
+                Resources: []string{"bgclusters"},
+                ResourceNames: []string{bgCluster.Name},
                 Verbs:     []string{"get"},
             },
         },

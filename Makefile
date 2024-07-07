@@ -32,7 +32,7 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 # Default target
-all: docker-build generate
+all: docker-build-linux generate
 
 # Build the binary
 build: $(GO_FILES)
@@ -88,6 +88,11 @@ clean:
 
 download:
 	go mod download
+
+# Build the Docker image
+docker-build-linux: build
+	docker buildx build --platform linux/amd64 -t $(DOCKER_IMAGE):$(TAG) . \
+		--build-arg BUILDPLATFORM=linux/amd64
 
 # Build the Docker image
 docker-build: build

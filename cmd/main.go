@@ -21,8 +21,10 @@ func main() {
 	switch mode {
 	case "operator":
 		operator.RunOperator()
-	case "init":
+	case "controller":
 		controller.RunController()
+	case "init":
+		controller.RunInitController()
 	default:
 		setupLog.Error(fmt.Errorf("invalid MODE environment variable: %s", mode), "unable to determine operation mode")
 		os.Exit(1)

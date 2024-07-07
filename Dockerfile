@@ -19,6 +19,9 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -o operator 
 # Use a minimal image
 FROM scratch
 
+# Disabled user for now since testing on docker-desktop requires root for hostPath mounts
+# USER 1001
+
 # Copy the manager binary
 COPY --from=builder /app/operator /operator
 
