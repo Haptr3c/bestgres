@@ -17,8 +17,13 @@ spec:
         {{- include "selectorLabels" . | nindent 8 }}
         {{- include "labels" . | nindent 8 }}
     spec:
+      serviceAccountName: bestgres-operator
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-      serviceAccountName: bestgres-operator
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace

@@ -22,6 +22,7 @@ import (
 type BGDbOpsReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	Namespace string
 }
 
 //+kubebuilder:rbac:groups=bestgres.io,resources=bgdbops,verbs=get;list;watch;create;update;patch;delete,namespace="{{ .Release.Namespace }}"
@@ -131,7 +132,7 @@ func (r *BGDbOpsReconciler) updateStatefulSetWithOperation(ctx context.Context, 
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *BGDbOpsReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&bestgresv1.BGDbOps{}).
+    return ctrl.NewControllerManagedBy(mgr).
+        For(&bestgresv1.BGDbOps{}).
         Complete(r)
 }

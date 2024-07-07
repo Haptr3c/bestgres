@@ -22,6 +22,7 @@ import (
 type BGClusterReconciler struct {
     client.Client
     Scheme *runtime.Scheme
+	Namespace string
 }
 
 //+kubebuilder:rbac:groups=bestgres.io,resources=bgclusters,verbs=get;list;watch;create;update;patch;delete,namespace="{{ .Release.Namespace }}"
@@ -72,7 +73,7 @@ func (r *BGClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
     // Update status
     podList := &corev1.PodList{}
     listOpts := []client.ListOption{
-        client.InNamespace(bgCluster.Namespace),
+        client.InNamespace(req.Namespace),
         client.MatchingLabels(labelsForBGCluster(bgCluster.Name)),
     }
     if err = r.List(ctx, podList, listOpts...); err != nil {
@@ -92,8 +93,6 @@ func (r *BGClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
     return ctrl.Result{}, nil
 }
-
-
 
 func (r *BGClusterReconciler) reconcileHeadlessService(ctx context.Context, bgCluster *bestgresv1.BGCluster) error {
 	svc := &corev1.Service{
@@ -345,6 +344,7 @@ func getPodNames(pods []corev1.Pod) []string {
     return podNames
 }
 
+// SetupWithManager sets up the controller with the Manager.
 func (r *BGClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
     return ctrl.NewControllerManagedBy(mgr).
         For(&bestgresv1.BGCluster{}).
