@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/base64"
+	"os"
 	"reflect"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -25,6 +26,14 @@ type BGClusterReconciler struct {
     client.Client
     Scheme *runtime.Scheme
 	Namespace string
+}
+
+func getOperatorImage() (string) {
+    imageName := os.Getenv("OPERATOR_IMAGE")
+    if imageName == "" {
+        imageName = "bestgres/operator:latest"
+    }
+    return imageName
 }
 
 //+kubebuilder:rbac:groups=bestgres.io,resources=bgclusters,verbs=get;list;watch;create;update;patch;delete,namespace="{{ .Release.Namespace }}"
@@ -164,6 +173,22 @@ func (r *BGClusterReconciler) reconcileStatefulSet(ctx context.Context, bgCluste
 							},
 						},
 					},
+                    InitContainers: []corev1.Container{
+						{
+							Name:            bgCluster.Name + "-init",
+							Image:           getOperatorImage(),
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Ports: []corev1.ContainerPort{
+								{ContainerPort: 8008, Protocol: corev1.ProtocolTCP},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{Name: "controller-binary", MountPath: "/mnt/binary"},
+							},
+							Env: []corev1.EnvVar{
+								{Name: "MODE", Value: "init"},
+                            },
+                        },
+                    },
 				},
 			},
 			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
@@ -181,6 +206,20 @@ func (r *BGClusterReconciler) reconcileStatefulSet(ctx context.Context, bgCluste
 						StorageClassName: &bgCluster.Spec.StorageClass,
 					},
 				},
+                {
+                    ObjectMeta: metav1.ObjectMeta{
+                        Name: "controller-binary",
+                    },
+                    Spec: corev1.PersistentVolumeClaimSpec{
+                        AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+                        Resources: corev1.VolumeResourceRequirements{
+                            Requests: corev1.ResourceList{
+                                corev1.ResourceStorage: resource.MustParse("100Mi"),
+                            },
+                        },
+                        StorageClassName: &bgCluster.Spec.StorageClass,
+                    },
+                },
 			},
 		},
 	}

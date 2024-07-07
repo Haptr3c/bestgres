@@ -27,3 +27,7 @@ app.kubernetes.io/version: {{ .Chart.AppVersion }}
 app.kubernetes.io/name: {{ include "name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
+
+{{- define "operatorImage" -}}
+"{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+{{- end -}}
