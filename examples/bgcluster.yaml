@@ -1,0 +1,12 @@
+apiVersion: bestgres.io/v1
+kind: BGCluster
+metadata:
+  name: example-bgcluster
+spec:
+  version: "16"
+  instances: 1
+  persistentVolumeSize: "1Gi"
+  storageClass: "hostpath"
+  superuserPassword: "password"
+  replicationPassword: "replicapassword"
+  patroniImage: "patroni/patroni:3.3.1"
