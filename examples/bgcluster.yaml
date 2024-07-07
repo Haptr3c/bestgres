@@ -3,7 +3,6 @@ kind: BGCluster
 metadata:
   name: example-bgcluster
 spec:
-  version: "16"
   instances: 1
   persistentVolumeSize: "1Gi"
   storageClass: "hostpath"

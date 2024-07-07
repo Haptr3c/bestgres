@@ -54,8 +54,6 @@ spec:
                 type: string
               superuserPassword:
                 type: string
-              version:
-                type: string
             required:
             - instances
             - patroniImage
@@ -63,7 +61,6 @@ spec:
             - replicationPassword
             - storageClass
             - superuserPassword
-            - version
             type: object
           status:
             description: BGClusterStatus defines the observed state of BGCluster

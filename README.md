@@ -1,6 +1,15 @@
 
 ## Principles
 - Minimal dependencies for security and simplicity
-- Uses vanila images and maintains full compatibility with upstream Postgres
-- Can build and iterate both locally and via CI/CD
-- No Webhooks or pods/exec
+- Uses vanila or user-supplied images and maintains full compatibility with upstream patroni
+- No Webhooks, pods/exec, cluster-scoped resources, or cluster-scoped permissions required
+- Airgapped-ready
+- 
+
+## TODO
+- [ ] implement initContainer/controller pattern
+- [ ] add support for db replicas (primary/standby)
+- [ ] add support for bgshardedclusters
+- [ ] add support for pgbackups
+- [ ] add support for pgrestores
+- [ ] add support for pgupgrades

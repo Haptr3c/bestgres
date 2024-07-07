@@ -23,8 +23,6 @@ type BGCluster struct {
 // BGClusterSpec defines the desired state of BGCluster
 type BGClusterSpec struct {
 	// +kubebuilder:validation:Required
-	Version string `json:"version"`
-	// +kubebuilder:validation:Required
 	Instances int32 `json:"instances"`
 	// +kubebuilder:validation:Required
 	PersistentVolumeSize string `json:"persistentVolumeSize"`
