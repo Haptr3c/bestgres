@@ -152,19 +152,31 @@ func reconciliationLoop(statefulSet *appsv1.StatefulSet, bgCluster *bestgresv1.B
 			continue
 		}
 
-		checkAnnotations(bgCluster, statefulSet)
+		checkAnnotations(bgCluster, statefulSet, context.TODO(), c)
 
 		time.Sleep(2 * time.Second)
 	}
 }
 
-func checkAnnotations(bgCluster *bestgresv1.BGCluster, statefulSet *appsv1.StatefulSet) {
-	if value, exists := bgCluster.Annotations[bgClusterInitializedAnnotation]; exists {
-		fmt.Printf("BGCluster initialized: %s\n", value)
+func checkAnnotations(bgCluster *bestgresv1.BGCluster, statefulSet *appsv1.StatefulSet, ctx context.Context, c client.Client) {
+    if bgCluster.Annotations == nil {
+        bgCluster.Annotations = make(map[string]string)
+    }
+
+    if value, exists := bgCluster.Annotations[bgClusterInitializedAnnotation]; exists {
+		if value == "true" {
+			// BGCluster is initialized
+			// no-op
+		} else {
+			fmt.Println("BGCluster not initialized")
+		}
 	} else {
-		fmt.Println("BGCluster not initialized")
-		bgCluster.Annotations[bgClusterInitializedAnnotation] = "false"
-	}
+        fmt.Println("BGCluster not initialized")
+        bgCluster.Annotations[bgClusterInitializedAnnotation] = "false"
+        if err := c.Update(ctx, bgCluster); err != nil {
+            fmt.Printf("Failed to update BGCluster: %v\n", err)
+        }
+    }
 
 	if value, exists := bgCluster.Annotations[bgDbOpsPendingAnnotation]; exists {
 		fmt.Printf("DB Ops pending: %s\n", value)

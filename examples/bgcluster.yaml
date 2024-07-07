@@ -6,7 +6,5 @@ spec:
   instances: 1
   persistentVolumeSize: "1Gi"
   storageClass: "hostpath"
-  superuserPassword: "password"
-  replicationPassword: "replicapassword"
-  patroni:
-    image: "patroni/patroni:3.3.1"
+  image:
+    tag: spilo:16

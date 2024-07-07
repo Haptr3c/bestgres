@@ -29,10 +29,6 @@ type BGClusterSpec struct {
 	// +kubebuilder:validation:Required
 	StorageClass string `json:"storageClass"`
 	// +kubebuilder:validation:Required
-	SuperuserPassword string `json:"superuserPassword"`
-	// +kubebuilder:validation:Required
-	ReplicationPassword string `json:"replicationPassword"`
-	// +kubebuilder:validation:Required
 	Image ImageSpec `json:"image"`
 }
 

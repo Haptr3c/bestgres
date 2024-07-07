@@ -41,42 +41,37 @@ spec:
           spec:
             description: BGClusterSpec defines the desired state of BGCluster
             properties:
-              instances:
-                format: int32
-                type: integer
-              patroni:
-                description: PatroniSpec defines the Patroni-specific configuration
+              image:
+                description: ImageSpec defines the Image-specific configuration
                 properties:
                   command:
                     default:
                     - /bin/sh
-                    - /entrypoint.sh
+                    - /launch.sh
+                    - init
                     items:
                       type: string
                     type: array
-                  image:
+                  tag:
                     type: string
                   workingDir:
                     default: /home/postgres
                     type: string
                 required:
-                - image
+                - tag
                 type: object
+              instances:
+                format: int32
+                type: integer
               persistentVolumeSize:
-                type: string
-              replicationPassword:
                 type: string
               storageClass:
                 type: string
-              superuserPassword:
-                type: string
             required:
+            - image
             - instances
-            - patroni
             - persistentVolumeSize
-            - replicationPassword
             - storageClass
-            - superuserPassword
             type: object
           status:
             description: BGClusterStatus defines the observed state of BGCluster
