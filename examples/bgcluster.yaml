@@ -1,10 +1,11 @@
 apiVersion: bestgres.io/v1
 kind: BGCluster
 metadata:
-  name: example-bgcluster
+  name: test-bgcluster
 spec:
-  instances: 2
+  instances: 1
   persistentVolumeSize: "1Gi"
   storageClass: "hostpath"
+  patroniLogLevel: "DEBUG"
   image:
     tag: spilo:16

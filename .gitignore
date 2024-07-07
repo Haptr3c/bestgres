@@ -4,6 +4,7 @@
 # text editor files
 *.bak
 *.tmp
+*.log
 
 # build files
 bin/*

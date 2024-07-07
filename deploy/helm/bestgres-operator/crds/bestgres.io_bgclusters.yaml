@@ -63,6 +63,9 @@ spec:
               instances:
                 format: int32
                 type: integer
+              patroniLogLevel:
+                default: INFO
+                type: string
               persistentVolumeSize:
                 type: string
               storageClass:

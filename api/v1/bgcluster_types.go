@@ -30,6 +30,8 @@ type BGClusterSpec struct {
 	StorageClass string `json:"storageClass"`
 	// +kubebuilder:validation:Required
 	Image ImageSpec `json:"image"`
+	// +kubebuilder:default="INFO"
+	PatroniLogLevel string `json:"patroniLogLevel,omitempty"`
 }
 
 // ImageSpec defines the Image-specific configuration

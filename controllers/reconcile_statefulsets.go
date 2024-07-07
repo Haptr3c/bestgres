@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -57,15 +56,17 @@ func (r *BGClusterReconciler) reconcileStatefulSet(ctx context.Context, bgCluste
                                 {Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"}}},
                                 {Name: "POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}}},
                                 {Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}},
-                                {Name: "DCS_ENABLE_KUBERNETES_API", Value: "true"},
-                                {Name: "KUBERNETES_SCOPE_LABEL", Value: bgCluster.Name},
-								{Name: "KUBERNETES_ROLE_LABEL", Value: "role"},
-                                {Name: "PGROOT", Value: "/home/postgres/pgdata/pgroot"},
                                 {Name: "SCOPE", Value: bgCluster.Name},
+                                {Name: "DCS_ENABLE_KUBERNETES_API", Value: "true"},
+								{Name: "PATRONI_KUBERNETES_USE_ENDPOINTS", Value: "true"},
+								{Name: "PATRONI_LOG_LEVEL", Value: bgCluster.Spec.PatroniLogLevel},
+                                {Name: "KUBERNETES_SCOPE_LABEL", Value: "cluster-name"},
+								{Name: "KUBERNETES_ROLE_LABEL", Value: "role"},
+								{Name: "PGUSER_ADMIN", Value: "admin-user"},
 								{Name: "PGPASSWORD_SUPERUSER", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "superuser-password"}}},
 								{Name: "PGPASSWORD_STANDBY", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "replication-password"}}},
 								{Name: "PGPASSWORD_ADMIN", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "admin-password"}}},
-								{Name: "PGUSER_ADMIN", Value: "admin-user"},
+                                {Name: "PGROOT", Value: "/home/postgres/pgdata/pgroot"},
                                 {
                                     Name: "SPILO_CONFIGURATION",
                                     Value: `bootstrap:
@@ -74,20 +75,20 @@ func (r *BGClusterReconciler) reconcileStatefulSet(ctx context.Context, bgCluste
     - auth-local: trust`,
                                 },
                             },
-							ReadinessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Scheme: corev1.URISchemeHTTP,
-										Path:   "/readiness",
-										Port:   intstr.FromInt(8008),
-									},
-								},
-								InitialDelaySeconds: 3,
-								PeriodSeconds:      10,
-								TimeoutSeconds:     5,
-								SuccessThreshold:   1,
-								FailureThreshold:   3,
-							},
+							// ReadinessProbe: &corev1.Probe{
+							// 	ProbeHandler: corev1.ProbeHandler{
+							// 		HTTPGet: &corev1.HTTPGetAction{
+							// 			Scheme: corev1.URISchemeHTTP,
+							// 			Path:   "/readiness",
+							// 			Port:   intstr.FromInt(8008),
+							// 		},
+							// 	},
+							// 	InitialDelaySeconds: 3,
+							// 	PeriodSeconds:      10,
+							// 	TimeoutSeconds:     5,
+							// 	SuccessThreshold:   1,
+							// 	FailureThreshold:   3,
+							// },
 						},
 					},
                     InitContainers: []corev1.Container{

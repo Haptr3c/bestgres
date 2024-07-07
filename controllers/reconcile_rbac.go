@@ -23,8 +23,18 @@ func (r *BGClusterReconciler) reconcileRole(ctx context.Context, bgCluster *best
         Rules: []rbacv1.PolicyRule{
             {
                 APIGroups: []string{""},
-                Resources: []string{"configmaps", "endpoints", "pods"},
+                Resources: []string{"configmaps", "endpoints"},
                 Verbs:     []string{"create", "get", "list", "patch", "update", "watch", "delete"},
+            },
+            {
+                APIGroups: []string{""},
+                Resources: []string{"pods"},
+                Verbs:     []string{"get", "list", "patch", "update", "watch"},
+            },
+            {
+                APIGroups: []string{""},
+                Resources: []string{"services"},
+                Verbs:     []string{"create"},
             },
             {
                 APIGroups: []string{"apps"},
