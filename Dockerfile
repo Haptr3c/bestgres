@@ -14,7 +14,7 @@ COPY . .
 ARG TARGETARCH
 ARG TARGETOS
 # Build
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -o operator cmd/operator/main.go
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -o operator cmd/main.go
 
 # Use a minimal image
 FROM scratch

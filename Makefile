@@ -37,14 +37,14 @@ all: docker-build generate
 # Build the binary
 build: $(GO_FILES)
 	mkdir -p $(OUTPUT_DIR)
-	cd cmd/operator && \
-	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o ../../$(OUTPUT_DIR)/$(BINARY_NAME) main.go
+	cd cmd && \
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o ../$(OUTPUT_DIR)/$(BINARY_NAME) main.go
 
 # Build for Linux
 build-linux: $(GO_FILES)
 	mkdir -p $(OUTPUT_DIR)
-	cd cmd/operator && \
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../../$(OUTPUT_DIR)/$(BINARY_NAME)-linux-amd64 main.go
+	cd cmd && \
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../$(OUTPUT_DIR)/$(BINARY_NAME)-linux-amd64 main.go
 
 # Generate code
 deepcopy:
