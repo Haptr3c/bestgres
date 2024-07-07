@@ -33,8 +33,9 @@ func generateRandomPassword(length int) (string, error) {
 
 func labelsForBGCluster(name string) map[string]string {
 	return map[string]string{
-		"application":  "patroni",
+		"application":  "spilo",
 		"cluster-name": name,
+		"spilo-cluster": name,
 	}
 }
 

@@ -1,5 +1,19 @@
+# system files
 .DS_Store
 
-bin/*
+# text editor files
 *.bak
 *.tmp
+
+# build files
+bin/*
+
+# example files
+*sgcluster*
+*patronidemo*
+patroni.yaml
+*spilo*.yaml
+*zalando*.yaml
+example*.yaml
+
+.github/workflows/*

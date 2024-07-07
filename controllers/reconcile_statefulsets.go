@@ -59,8 +59,13 @@ func (r *BGClusterReconciler) reconcileStatefulSet(ctx context.Context, bgCluste
                                 {Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}},
                                 {Name: "DCS_ENABLE_KUBERNETES_API", Value: "true"},
                                 {Name: "KUBERNETES_SCOPE_LABEL", Value: bgCluster.Name},
+								{Name: "KUBERNETES_ROLE_LABEL", Value: "role"},
                                 {Name: "PGROOT", Value: "/home/postgres/pgdata/pgroot"},
                                 {Name: "SCOPE", Value: bgCluster.Name},
+								{Name: "PGPASSWORD_SUPERUSER", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "superuser-password"}}},
+								{Name: "PGPASSWORD_STANDBY", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "replication-password"}}},
+								{Name: "PGPASSWORD_ADMIN", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "admin-password"}}},
+								{Name: "PGUSER_ADMIN", Value: "admin-user"},
                                 {
                                     Name: "SPILO_CONFIGURATION",
                                     Value: `bootstrap:
@@ -68,10 +73,6 @@ func (r *BGClusterReconciler) reconcileStatefulSet(ctx context.Context, bgCluste
     - auth-host: md5
     - auth-local: trust`,
                                 },
-                                {Name: "PGPASSWORD_SUPERUSER", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "superuser-password"}}},
-                                {Name: "PGPASSWORD_STANDBY", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "replication-password"}}},
-                                {Name: "PGPASSWORD_ADMIN", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "admin-password"}}},
-                                {Name: "PGUSER_ADMIN", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "admin-user"}}},
                             },
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
