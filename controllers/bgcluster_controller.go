@@ -131,7 +131,7 @@ func (r *BGClusterReconciler) reconcileStatefulSet(ctx context.Context, bgCluste
 					Containers: []corev1.Container{
 						{
 							Name:            bgCluster.Name,
-							Image:           bgCluster.Spec.Patroni.Image,
+							Image:           bgCluster.Spec.Image.Tag,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Ports: []corev1.ContainerPort{
 								{ContainerPort: 8008, Protocol: corev1.ProtocolTCP},
@@ -145,22 +145,24 @@ func (r *BGClusterReconciler) reconcileStatefulSet(ctx context.Context, bgCluste
 							Env: []corev1.EnvVar{
                                 {Name: "MODE", Value: "controller"},
                                 {Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"}}},
+                                {Name: "POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}}},
                                 {Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}},
-								{Name: "PATRONI_KUBERNETES_POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}}},
-								{Name: "PATRONI_KUBERNETES_NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}},
-								{Name: "PATRONI_KUBERNETES_BYPASS_API_SERVICE", Value: "true"},
-								{Name: "PATRONI_KUBERNETES_USE_ENDPOINTS", Value: "true"},
-								{Name: "PATRONI_KUBERNETES_LABELS", Value: "{application: patroni, cluster-name: " + bgCluster.Name + "}"},
-								{Name: "PATRONI_SUPERUSER_USERNAME", Value: "postgres"},
-								{Name: "PATRONI_SUPERUSER_PASSWORD", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "superuser-password"}}},
-								{Name: "PATRONI_REPLICATION_USERNAME", Value: "standby"},
-								{Name: "PATRONI_REPLICATION_PASSWORD", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "replication-password"}}},
-								{Name: "PATRONI_SCOPE", Value: bgCluster.Name},
-								{Name: "PATRONI_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"}}},
-								{Name: "PATRONI_POSTGRESQL_DATA_DIR", Value: "/home/postgres/pgdata/pgroot/data"},
-								{Name: "PATRONI_POSTGRESQL_PGPASS", Value: "/tmp/pgpass"},
-								{Name: "PATRONI_POSTGRESQL_LISTEN", Value: "0.0.0.0:5432"},
-								{Name: "PATRONI_RESTAPI_LISTEN", Value: "0.0.0.0:8008"},
+                                {Name: "DCS_ENABLE_KUBERNETES_API", Value: "true"},
+                                {Name: "KUBERNETES_SCOPE_LABEL", Value: bgCluster.Name},
+                                {Name: "PGROOT", Value: "/home/postgres/pgdata/pgroot"},
+                                {Name: "SCOPE", Value: bgCluster.Name},
+                                {
+                                    Name: "SPILO_CONFIGURATION",
+                                    Value: `bootstrap:
+  initdb:
+    - auth-host: md5
+    - auth-local: trust`,
+                                },
+                                // {Name: "PGPASSWORD_STANDBY", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{},}},
+                                // PGPASSWORD_ADMIN
+                                // PGUSER_ADMIN
+                                // PGPASSWORD_SUPERUSER
+
 							},
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{

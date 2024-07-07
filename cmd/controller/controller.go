@@ -110,8 +110,8 @@ func getResources(podName, namespace string, c client.Client) (*appsv1.StatefulS
 }
 
 func runCommand(bgCluster *bestgresv1.BGCluster) {
-	command := bgCluster.Spec.Patroni.Command
-	workingDir := bgCluster.Spec.Patroni.WorkingDir
+	command := bgCluster.Spec.Image.Command
+	workingDir := bgCluster.Spec.Image.WorkingDir
 
 	if len(command) == 0 {
 		fmt.Println("No command specified in BGCluster")
@@ -154,13 +154,16 @@ func reconciliationLoop(statefulSet *appsv1.StatefulSet, bgCluster *bestgresv1.B
 
 		checkAnnotations(bgCluster, statefulSet)
 
-		time.Sleep(5 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 }
 
 func checkAnnotations(bgCluster *bestgresv1.BGCluster, statefulSet *appsv1.StatefulSet) {
 	if value, exists := bgCluster.Annotations[bgClusterInitializedAnnotation]; exists {
 		fmt.Printf("BGCluster initialized: %s\n", value)
+	} else {
+		fmt.Println("BGCluster not initialized")
+		bgCluster.Annotations[bgClusterInitializedAnnotation] = "false"
 	}
 
 	if value, exists := bgCluster.Annotations[bgDbOpsPendingAnnotation]; exists {
