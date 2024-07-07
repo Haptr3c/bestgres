@@ -50,6 +50,9 @@ func (r *BGClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
     if err := r.reconcileService(ctx, bgCluster); err != nil {
         return ctrl.Result{}, err
     }
+	if err := r.reconcileConfigMaps(ctx, bgCluster); err != nil {
+		return ctrl.Result{}, err
+	}
     if err := r.reconcileReplicaService(ctx, bgCluster); err != nil {
         return ctrl.Result{}, err
     }

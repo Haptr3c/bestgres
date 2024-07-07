@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -58,11 +59,12 @@ func (r *BGClusterReconciler) reconcileStatefulSet(ctx context.Context, bgCluste
                                 {Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}},
                                 {Name: "SCOPE", Value: bgCluster.Name},
                                 {Name: "DCS_ENABLE_KUBERNETES_API", Value: "true"},
-								{Name: "PATRONI_KUBERNETES_USE_ENDPOINTS", Value: "true"},
+								{Name: "PATRONI_KUBERNETES_USE_ENDPOINTS", Value: "false"},
 								{Name: "PATRONI_LOG_LEVEL", Value: bgCluster.Spec.PatroniLogLevel},
+								{Name: "KUBERNETES_USE_CONFIGMAPS", Value: "true"},
                                 {Name: "KUBERNETES_SCOPE_LABEL", Value: "cluster-name"},
 								{Name: "KUBERNETES_ROLE_LABEL", Value: "role"},
-								{Name: "PGUSER_ADMIN", Value: "admin-user"},
+								{Name: "PGUSER_ADMIN", Value: "admin"},
 								{Name: "PGPASSWORD_SUPERUSER", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "superuser-password"}}},
 								{Name: "PGPASSWORD_STANDBY", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "replication-password"}}},
 								{Name: "PGPASSWORD_ADMIN", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "admin-password"}}},
@@ -72,23 +74,25 @@ func (r *BGClusterReconciler) reconcileStatefulSet(ctx context.Context, bgCluste
                                     Value: `bootstrap:
   initdb:
     - auth-host: md5
-    - auth-local: trust`,
+    - auth-local: trust
+  dcs:
+    retry_timeout: 10000`,
                                 },
                             },
-							// ReadinessProbe: &corev1.Probe{
-							// 	ProbeHandler: corev1.ProbeHandler{
-							// 		HTTPGet: &corev1.HTTPGetAction{
-							// 			Scheme: corev1.URISchemeHTTP,
-							// 			Path:   "/readiness",
-							// 			Port:   intstr.FromInt(8008),
-							// 		},
-							// 	},
-							// 	InitialDelaySeconds: 3,
-							// 	PeriodSeconds:      10,
-							// 	TimeoutSeconds:     5,
-							// 	SuccessThreshold:   1,
-							// 	FailureThreshold:   3,
-							// },
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Scheme: corev1.URISchemeHTTP,
+										Path:   "/readiness",
+										Port:   intstr.FromInt(8008),
+									},
+								},
+								InitialDelaySeconds: 3,
+								PeriodSeconds:      10,
+								TimeoutSeconds:     5,
+								SuccessThreshold:   1,
+								FailureThreshold:   3,
+							},
 						},
 					},
                     InitContainers: []corev1.Container{

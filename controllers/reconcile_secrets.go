@@ -53,13 +53,6 @@ func (r *BGClusterReconciler) reconcileSecret(ctx context.Context, bgCluster *be
         }
         secret.Data["admin-password"] = []byte(base64.StdEncoding.EncodeToString([]byte(password)))
     }
-    if _, exists := secret.Data["admin-user"]; !exists {
-        user, err := generateRandomPassword(8)
-        if err != nil {
-            return err
-        }
-        secret.Data["admin-user"] = []byte(base64.StdEncoding.EncodeToString([]byte(user)))
-    }
 
     // Create or update the secret
     if err := r.Update(ctx, secret); err != nil {

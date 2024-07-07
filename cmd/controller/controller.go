@@ -169,6 +169,7 @@ func checkAnnotations(bgCluster *bestgresv1.BGCluster, statefulSet *appsv1.State
 			// no-op
 		} else {
 			fmt.Println("BGCluster not initialized")
+			// no-op for now
 		}
 	} else {
         fmt.Println("BGCluster not initialized")
