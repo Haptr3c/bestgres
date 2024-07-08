@@ -8,7 +8,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -57,16 +56,4 @@ func (r *BGClusterReconciler) reconcileConfigMaps(ctx context.Context, bgCluster
 	}
 
 	return nil
-}
-
-func isOwnedByBGCluster(obj metav1.Object, bgCluster *bestgresv1.BGCluster) bool {
-	for _, owner := range obj.GetOwnerReferences() {
-		if owner.APIVersion == bestgresv1.GroupVersion.String() &&
-			owner.Kind == "BGCluster" &&
-			owner.Name == bgCluster.Name &&
-			owner.UID == bgCluster.UID {
-			return true
-		}
-	}
-	return false
 }

@@ -1,11 +1,13 @@
 package controllers
 
 import (
+	bestgresv1 "bestgres/api/v1"
 	"crypto/rand"
 	"math/big"
 	"os"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func getOperatorImage() (string) {
@@ -44,4 +46,16 @@ func getPodNames(pods []corev1.Pod) []string {
 		podNames = append(podNames, pod.Name)
 	}
 	return podNames
+}
+
+func isOwnedByBGCluster(obj metav1.Object, bgCluster *bestgresv1.BGCluster) bool {
+	for _, owner := range obj.GetOwnerReferences() {
+		if owner.APIVersion == bestgresv1.GroupVersion.String() &&
+			owner.Kind == "BGCluster" &&
+			owner.Name == bgCluster.Name &&
+			owner.UID == bgCluster.UID {
+			return true
+		}
+	}
+	return false
 }

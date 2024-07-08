@@ -4,6 +4,7 @@ import (
 	bestgresv1 "bestgres/api/v1"
 	"context"
 	"encoding/base64"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,6 +67,23 @@ func (r *BGClusterReconciler) reconcileSecret(ctx context.Context, bgCluster *be
         }
     } else {
         log.Info("Updating existing secret")
+    }
+
+    // Check if the BGCluster is already the owner
+    if isOwnedByBGCluster(secret, bgCluster) {
+        log.Info(fmt.Sprintf("Secret %s is already owned by BGCluster, skipping", secret.Name))
+    }
+
+    // Update the owner reference
+    if err := ctrl.SetControllerReference(bgCluster, secret, r.Scheme); err != nil {
+        log.Error(err, fmt.Sprintf("Failed to set controller reference for Secret %s", secret.Name))
+        return err
+    }
+
+    // Update the ConfigMap
+    if err := r.Update(ctx, secret); err != nil {
+        log.Error(err, fmt.Sprintf("Failed to update Secret %s", secret.Name))
+        return err
     }
 
     return nil

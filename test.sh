@@ -6,10 +6,14 @@ kubectl delete -f examples/bgshardedcluster.yaml || true
 helm uninstall bestgres-operator || true
 kubectl delete pvc pgdata-test-bgcluster-0 || true
 kubectl delete pvc pgdata-test-bgcluster-1 || true
-kubectl delete pvc pgdata-test-bgcluster-2 || true
 kubectl delete pvc controller-test-bgcluster-0 || true
 kubectl delete pvc controller-test-bgcluster-1 || true
-kubectl delete pvc controller-test-bgcluster-2 || true
+kubectl delete pvc pgdata-bgshardedcluster-coordinator-0 || true
+kubectl delete pvc pgdata-bgshardedcluster-worker-0-0 || true
+kubectl delete pvc pgdata-bgshardedcluster-worker-1-0 || true
+kubectl delete pvc controller-bgshardedcluster-coordinator-0 || true
+kubectl delete pvc controller-bgshardedcluster-worker-0-0 || true
+kubectl delete pvc controller-bgshardedcluster-worker-1-0 || true
 
 kubectl delete crd bgclusters.bestgres.io || true
 kubectl delete crd bgdbops.bestgres.io || true
