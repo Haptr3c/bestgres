@@ -70,6 +70,32 @@ rules:
   - patch
   - update
 - apiGroups:
+  - bestgres.io
+  resources:
+  - bgshardedclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - bestgres.io
+  resources:
+  - bgshardedclusters/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - bestgres.io
+  resources:
+  - bgshardedclusters/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - ""
   resources:
   - configmaps

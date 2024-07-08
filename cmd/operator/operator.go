@@ -98,6 +98,7 @@ func RunOperator() {
 		setupLog.Error(err, "unable to create controller", "controller", "BGCluster")
 		os.Exit(1)
 	}
+
 	if err = (&controllers.BGDbOpsReconciler{
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
@@ -106,6 +107,16 @@ func RunOperator() {
 		setupLog.Error(err, "unable to create controller", "controller", "BGDbOps")
 		os.Exit(1)
 	}
+
+	if err = (&controllers.BGShardedClusterReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+        Namespace: namespace,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "BGShardedCluster")
+		os.Exit(1)
+	}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
