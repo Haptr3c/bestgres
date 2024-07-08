@@ -16,8 +16,10 @@
 - [x] add support for db replicas
 - [x] add support for bgshardedclusters
   - [ ] get citus working on shards
+  - [ ] cleanup icky bootstrap code
 - [ ] remove and test without endpoints perms
 - [ ] get sgdbops communications working
+- [ ] polish user experience 
 - [ ] add support for pgbackups
 - [ ] add support for pgrestores
 - [ ] add support for arbitrary pg extensions via oci image

@@ -10,174 +10,183 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-
 func (r *BGClusterReconciler) reconcileStatefulSet(ctx context.Context, bgCluster *bestgresv1.BGCluster) error {
 	log := ctrl.LoggerFrom(ctx)
-	labels := labelsForBGCluster(bgCluster.Name)
-	replicas := bgCluster.Spec.Instances
+	sts := r.createStatefulSetObject(bgCluster)
 
-	sts := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      bgCluster.Name,
-			Namespace: bgCluster.Namespace,
-			Labels:    labels,
-		},
-		Spec: appsv1.StatefulSetSpec{
-			Replicas: &replicas,
-			ServiceName: bgCluster.Name,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
-				},
-				Spec: corev1.PodSpec{
-					ServiceAccountName: bgCluster.Name,
-					Containers: []corev1.Container{
-						{
-							Name:            bgCluster.Name,
-							Image:           bgCluster.Spec.Image.Tag,
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Ports: []corev1.ContainerPort{
-								{ContainerPort: 8008, Protocol: corev1.ProtocolTCP},
-								{ContainerPort: 5432, Protocol: corev1.ProtocolTCP},
-							},
-                            Command: []string{"/app/controller"},
-							VolumeMounts: []corev1.VolumeMount{
-								{Name: "pgdata", MountPath: "/home/postgres/pgdata"},
-								{Name: "controller", MountPath: "/app", },
-							},
-							Env: []corev1.EnvVar{
-                                {Name: "MODE", Value: "controller"},
-                                {Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"}}},
-                                {Name: "POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}}},
-                                {Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}},
-                                {Name: "SCOPE", Value: bgCluster.Name},
-                                {Name: "DCS_ENABLE_KUBERNETES_API", Value: "true"},
-								{Name: "PATRONI_KUBERNETES_USE_ENDPOINTS", Value: "false"},
-								{Name: "PATRONI_LOG_LEVEL", Value: bgCluster.Spec.PatroniLogLevel},
-								{Name: "KUBERNETES_USE_CONFIGMAPS", Value: "true"},
-                                {Name: "KUBERNETES_SCOPE_LABEL", Value: "cluster-name"},
-								{Name: "KUBERNETES_ROLE_LABEL", Value: "role"},
-								{Name: "PGUSER_ADMIN", Value: "admin"},
-								{Name: "PGPASSWORD_SUPERUSER", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "superuser-password"}}},
-								{Name: "PGPASSWORD_STANDBY", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "replication-password"}}},
-								{Name: "PGPASSWORD_ADMIN", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "admin-password"}}},
-                                {Name: "PGROOT", Value: "/home/postgres/pgdata/pgroot"},
-                                {
-                                    Name: "SPILO_CONFIGURATION",
-                                    Value: `bootstrap:
-  initdb:
-    - auth-host: md5
-    - auth-local: trust
-  dcs:
-    retry_timeout: 10000`,
-                                },
-                            },
-							ReadinessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Scheme: corev1.URISchemeHTTP,
-										Path:   "/readiness",
-										Port:   intstr.FromInt(8008),
-									},
-								},
-								InitialDelaySeconds: 3,
-								PeriodSeconds:      10,
-								TimeoutSeconds:     5,
-								SuccessThreshold:   1,
-								FailureThreshold:   3,
-							},
-						},
-					},
-                    InitContainers: []corev1.Container{
-						{
-							Name:            bgCluster.Name + "-init",
-							Image:           getOperatorImage(),
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Ports: []corev1.ContainerPort{
-								{ContainerPort: 8008, Protocol: corev1.ProtocolTCP},
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{Name: "controller", MountPath: "/app"},
-							},
-							Env: []corev1.EnvVar{
-								{Name: "MODE", Value: "init"},
-                            },
-                        },
-                    },
-				},
-			},
-			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "pgdata",
-					},
-					Spec: corev1.PersistentVolumeClaimSpec{
-						AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-						Resources: corev1.VolumeResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceStorage: resource.MustParse(bgCluster.Spec.PersistentVolumeSize),
-							},
-						},
-						StorageClassName: &bgCluster.Spec.StorageClass,
-					},
-				},
-                {
-                    ObjectMeta: metav1.ObjectMeta{
-                        Name: "controller",
-                    },
-                    Spec: corev1.PersistentVolumeClaimSpec{
-                        AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-                        Resources: corev1.VolumeResourceRequirements{
-                            Requests: corev1.ResourceList{
-                                corev1.ResourceStorage: resource.MustParse("100Mi"),
-                            },
-                        },
-                        StorageClassName: &bgCluster.Spec.StorageClass,
-                    },
-                },
-			},
-		},
-	}
-
-	// Set BGCluster instance as the owner and controller
 	if err := ctrl.SetControllerReference(bgCluster, sts, r.Scheme); err != nil {
 		return err
 	}
 
-	// Check if the StatefulSet already exists
 	foundSts := &appsv1.StatefulSet{}
 	err := r.Get(ctx, types.NamespacedName{Name: sts.Name, Namespace: sts.Namespace}, foundSts)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// StatefulSet does not exist, create a new one
-			log.Info("Creating a new StatefulSet", "StatefulSet.Namespace", sts.Namespace, "StatefulSet.Name", sts.Name)
-			err = r.Create(ctx, sts)
-			if err != nil {
-				log.Error(err, "Failed to create new StatefulSet", "StatefulSet.Namespace", sts.Namespace, "StatefulSet.Name", sts.Name)
-				return err
-			}
-		} else {
-			// Error reading the object - requeue the request.
-			log.Error(err, "Failed to get StatefulSet")
-			return err
+			return r.createStatefulSet(ctx, sts)
 		}
-	} else {
-		// StatefulSet already exists, update it
-		log.Info("Updating existing StatefulSet", "StatefulSet.Namespace", foundSts.Namespace, "StatefulSet.Name", foundSts.Name)
-		sts.ResourceVersion = foundSts.ResourceVersion
-		err = r.Update(ctx, sts)
-		if err != nil {
-			log.Error(err, "Failed to update StatefulSet", "StatefulSet.Namespace", sts.Namespace, "StatefulSet.Name", sts.Name)
-			return err
-		}
+		log.Error(err, "Failed to get StatefulSet")
+		return err
 	}
 
-	return nil
+	return r.updateStatefulSet(ctx, sts, foundSts)
+}
+
+func (r *BGClusterReconciler) createStatefulSetObject(bgCluster *bestgresv1.BGCluster) *appsv1.StatefulSet {
+	labels := r.getLabelsAndAnnotations(bgCluster)
+	replicas := bgCluster.Spec.Instances
+
+	return &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        bgCluster.Name,
+			Namespace:   bgCluster.Namespace,
+			Labels:      labels,
+			Annotations: labels,
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas:    &replicas,
+			ServiceName: bgCluster.Name,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+			Template:             r.createPodTemplateSpec(bgCluster),
+			VolumeClaimTemplates: r.createVolumeClaimTemplates(bgCluster),
+		},
+	}
+}
+
+func (r *BGClusterReconciler) createPodTemplateSpec(bgCluster *bestgresv1.BGCluster) corev1.PodTemplateSpec {
+	labels := r.getLabelsAndAnnotations(bgCluster)
+
+	return corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:      labels,
+			Annotations: labels,
+		},
+		Spec: corev1.PodSpec{
+			ServiceAccountName: bgCluster.Name,
+			Containers:         []corev1.Container{r.createMainContainer(bgCluster)},
+			InitContainers:     []corev1.Container{r.createInitContainer(bgCluster)},
+		},
+	}
+}
+
+func (r *BGClusterReconciler) createMainContainer(bgCluster *bestgresv1.BGCluster) corev1.Container {
+	return corev1.Container{
+		Name:            bgCluster.Name,
+		Image:           bgCluster.Spec.Image.Tag,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Ports:           r.createContainerPorts(),
+		Command:         []string{"/app/controller"},
+		VolumeMounts:    r.createVolumeMounts(),
+		Env:             r.createEnvironmentVariables(bgCluster),
+	}
+}
+
+func (r *BGClusterReconciler) createInitContainer(bgCluster *bestgresv1.BGCluster) corev1.Container {
+	return corev1.Container{
+		Name:            bgCluster.Name + "-init",
+		Image:           getOperatorImage(),
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Ports:           []corev1.ContainerPort{{ContainerPort: 8008, Protocol: corev1.ProtocolTCP}},
+		VolumeMounts:    []corev1.VolumeMount{{Name: "controller", MountPath: "/app"}},
+		Env:             []corev1.EnvVar{{Name: "MODE", Value: "init"}},
+	}
+}
+
+func (r *BGClusterReconciler) createContainerPorts() []corev1.ContainerPort {
+	return []corev1.ContainerPort{
+		{ContainerPort: 8008, Protocol: corev1.ProtocolTCP},
+		{ContainerPort: 5432, Protocol: corev1.ProtocolTCP},
+	}
+}
+
+func (r *BGClusterReconciler) createVolumeMounts() []corev1.VolumeMount {
+	return []corev1.VolumeMount{
+		{Name: "pgdata", MountPath: "/home/postgres/pgdata"},
+		{Name: "controller", MountPath: "/app"},
+	}
+}
+
+func (r *BGClusterReconciler) createEnvironmentVariables(bgCluster *bestgresv1.BGCluster) []corev1.EnvVar {
+	return []corev1.EnvVar{
+		{Name: "MODE", Value: "controller"},
+		{Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"}}},
+		{Name: "POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}}},
+		{Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}},
+		{Name: "SCOPE", Value: bgCluster.Name},
+		{Name: "DCS_ENABLE_KUBERNETES_API", Value: "true"},
+		{Name: "PATRONI_KUBERNETES_USE_ENDPOINTS", Value: "false"},
+		{Name: "PATRONI_LOG_LEVEL", Value: bgCluster.Spec.PatroniLogLevel},
+		{Name: "KUBERNETES_USE_CONFIGMAPS", Value: "true"},
+		{Name: "KUBERNETES_SCOPE_LABEL", Value: "cluster-name"},
+		{Name: "KUBERNETES_ROLE_LABEL", Value: "role"},
+		{Name: "PGUSER_ADMIN", Value: "admin"},
+		{Name: "PGPASSWORD_SUPERUSER", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "superuser-password"}}},
+		{Name: "PGPASSWORD_STANDBY", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "replication-password"}}},
+		{Name: "PGPASSWORD_ADMIN", ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name}, Key: "admin-password"}}},
+		{Name: "PGROOT", Value: "/home/postgres/pgdata/pgroot"},
+		{Name: "SPILO_CONFIGURATION", ValueFrom: &corev1.EnvVarSource{ConfigMapKeyRef: &corev1.ConfigMapKeySelector{LocalObjectReference: corev1.LocalObjectReference{Name: bgCluster.Name + "-postgres-config"}, Key: "postgres.yaml"}}},
+	}
+}
+
+func (r *BGClusterReconciler) createVolumeClaimTemplates(bgCluster *bestgresv1.BGCluster) []corev1.PersistentVolumeClaim {
+	return []corev1.PersistentVolumeClaim{
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: "pgdata"},
+			Spec: corev1.PersistentVolumeClaimSpec{
+				AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+				Resources: corev1.VolumeResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceStorage: resource.MustParse(bgCluster.Spec.PersistentVolumeSize),
+					},
+				},
+				StorageClassName: &bgCluster.Spec.StorageClass,
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: "controller"},
+			Spec: corev1.PersistentVolumeClaimSpec{
+				AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+				Resources: corev1.VolumeResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceStorage: resource.MustParse("100Mi"),
+					},
+				},
+				StorageClassName: &bgCluster.Spec.StorageClass,
+			},
+		},
+	}
+}
+
+func (r *BGClusterReconciler) getLabelsAndAnnotations(bgCluster *bestgresv1.BGCluster) map[string]string {
+	labels := map[string]string{
+		"application":  "patroni",
+		"cluster-name": bgCluster.Name,
+	}
+
+	if bgCluster.Labels["bestgres.io/part-of"] != "" {
+		labels["bestgres.io/part-of"] = bgCluster.Labels["bestgres.io/part-of"]
+	}
+
+	if bgCluster.Labels["bestgres.io/role"] != "" {
+		labels["bestgres.io/role"] = bgCluster.Labels["bestgres.io/role"]
+	}
+
+	return labels
+}
+
+func (r *BGClusterReconciler) createStatefulSet(ctx context.Context, sts *appsv1.StatefulSet) error {
+	log := ctrl.LoggerFrom(ctx)
+	log.Info("Creating a new StatefulSet", "StatefulSet.Namespace", sts.Namespace, "StatefulSet.Name", sts.Name)
+	return r.Create(ctx, sts)
+}
+
+func (r *BGClusterReconciler) updateStatefulSet(ctx context.Context, sts, foundSts *appsv1.StatefulSet) error {
+	log := ctrl.LoggerFrom(ctx)
+	log.Info("Updating existing StatefulSet", "StatefulSet.Namespace", foundSts.Namespace, "StatefulSet.Name", foundSts.Name)
+	sts.ResourceVersion = foundSts.ResourceVersion
+	return r.Update(ctx, sts)
 }

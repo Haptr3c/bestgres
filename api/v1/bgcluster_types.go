@@ -32,6 +32,8 @@ type BGClusterSpec struct {
 	Image ImageSpec `json:"image"`
 	// +kubebuilder:default="INFO"
 	PatroniLogLevel string `json:"patroniLogLevel,omitempty"`
+	// +kubebuilder:default={}
+	BootstrapSQL []string `json:"bootstrapSQL,omitempty"`
 }
 
 // ImageSpec defines the Image-specific configuration

@@ -53,7 +53,7 @@ func (r *BGShardedClusterReconciler) createBGCluster(ctx context.Context, bgShar
 			Name:      name,
 			Namespace: bgShardedCluster.Namespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/part-of": bgShardedCluster.Name,
+				"bestgres.io/part-of": bgShardedCluster.Name,
 				"bestgres.io/role":          map[bool]string{true: "coordinator", false: "worker"}[isCoordinator],
 			},
 		},

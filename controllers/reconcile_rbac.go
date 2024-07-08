@@ -48,6 +48,13 @@ func (r *BGClusterReconciler) reconcileRole(ctx context.Context, bgCluster *best
                 ResourceNames: []string{bgCluster.Name},
                 Verbs:     []string{"get", "update"},
             },
+            {
+                APIGroups: []string{"bestgres.io"},
+                Resources: []string{"bgshardedclusters"},
+                // TODO see if these perms can be pared down to named resource
+                // ResourceNames: []string{bgCluster.Name},
+                Verbs:     []string{"get"},
+            },
         },
     }
     

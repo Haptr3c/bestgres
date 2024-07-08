@@ -68,7 +68,6 @@ func (r *BGShardedClusterReconciler) updateStatus(ctx context.Context, bgSharded
 
 		return r.Status().Update(ctx, bgShardedCluster)
 	}
-
 	return nil
 }
 

@@ -44,6 +44,11 @@ spec:
               coordinator:
                 description: Coordinator node configuration
                 properties:
+                  bootstrapSQL:
+                    default: []
+                    items:
+                      type: string
+                    type: array
                   image:
                     description: ImageSpec defines the Image-specific configuration
                     properties:
@@ -86,6 +91,11 @@ spec:
               workers:
                 description: Worker nodes configuration
                 properties:
+                  bootstrapSQL:
+                    default: []
+                    items:
+                      type: string
+                    type: array
                   image:
                     description: ImageSpec defines the Image-specific configuration
                     properties:

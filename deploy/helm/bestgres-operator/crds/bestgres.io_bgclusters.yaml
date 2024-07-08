@@ -41,6 +41,11 @@ spec:
           spec:
             description: BGClusterSpec defines the desired state of BGCluster
             properties:
+              bootstrapSQL:
+                default: []
+                items:
+                  type: string
+                type: array
               image:
                 description: ImageSpec defines the Image-specific configuration
                 properties:
