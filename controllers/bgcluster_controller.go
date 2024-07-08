@@ -25,7 +25,7 @@ type BGClusterReconciler struct {
 //+kubebuilder:rbac:groups=bestgres.io,resources=bgclusters/status,verbs=get;update;patch,namespace="{{ .Release.Namespace }}"
 //+kubebuilder:rbac:groups=bestgres.io,resources=bgclusters/finalizers,verbs=update,namespace="{{ .Release.Namespace }}"
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete,namespace="{{ .Release.Namespace }}"
-//+kubebuilder:rbac:groups=core,resources=pods;services;endpoints;secrets;serviceaccounts;configmaps,verbs=get;list;watch;create;update;patch;delete,namespace="{{ .Release.Namespace }}"
+//+kubebuilder:rbac:groups=core,resources=pods;services;secrets;serviceaccounts;configmaps,verbs=get;list;watch;create;update;patch;delete,namespace="{{ .Release.Namespace }}"
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch;create;update;patch;delete,namespace="{{ .Release.Namespace }}"
 
 func (r *BGClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -44,9 +44,6 @@ func (r *BGClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
     if err := r.reconcileStatefulSet(ctx, bgCluster); err != nil {
         return ctrl.Result{}, err
     }
-    // if err := r.reconcileEndpoints(ctx, bgCluster); err != nil {
-    //     return ctrl.Result{}, err
-    // }
     if err := r.reconcileService(ctx, bgCluster); err != nil {
         return ctrl.Result{}, err
     }
@@ -99,7 +96,6 @@ func (r *BGClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&bestgresv1.BGCluster{}).
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&corev1.Service{}).
-		Owns(&corev1.Endpoints{}).
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&rbacv1.Role{}).

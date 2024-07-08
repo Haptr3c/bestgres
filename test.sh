@@ -22,3 +22,7 @@ make
 
 helm upgrade --install bestgres-operator deploy/helm/bestgres-operator/.
 kubectl apply -f examples/bgshardedcluster.yaml
+
+sleep 10
+
+kubectl exec -it bgshardedcluster-coordinator-0 -- psql -U postgres -c 'SELECT * from pg_dist_node;'

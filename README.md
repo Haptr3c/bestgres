@@ -14,12 +14,15 @@
 ## TODO
 - [x] implement initContainer/controller pattern
 - [x] add support for db replicas
+- [x] remove and test without endpoints perms
 - [x] add support for bgshardedclusters
   - [x] get citus working on shards
-  - [ ] cleanup icky bootstrap code
-- [ ] remove and test without endpoints perms
+  - [ ] add signaling for coordinator/workers
+- [ ] cleanup icky controller/bootstrap code
 - [ ] get sgdbops communications working
-- [ ] polish user experience 
+- [ ] polish user experience
+  - [ ] better error messages
+  - [ ] cleaner/better CRD structure
 - [ ] add support for pgbackups
 - [ ] add support for pgrestores
 - [ ] add support for arbitrary pg extensions via oci image
