@@ -3,6 +3,7 @@
 package controller
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -42,7 +43,7 @@ func RunController() {
 	err := waitForDatabase(5 * time.Minute)
 	if err != nil {
 		fmt.Printf("Error waiting for database: %v\n", err)
-		return
+		os.Exit(1)
 	}
 	reconciliationLoop(statefulSet, bgCluster, namespace, c)
 }
@@ -143,11 +144,11 @@ func hackConfigs(bgCluster *bestgresv1.BGCluster) {
 			newLine    string
 		}{
 			{
-				oldPattern: regexp.MustCompile(`(?m)\s*- host\s+all\s+all\s+127\.0\.0\.1/32\s+md5\s*`),
-				newLine:    `- host  all  all  10.0.0.0/8  trust` + "\n" + `  - host  all  all 127.0.0.1 trust`,
+				oldPattern: regexp.MustCompile(`- host\s+all\s+all\s+127\.0\.0\.1/32\s+md5\s*`),
+				newLine:    `- host  all  all  10.0.0.0/8  trust` + "\n"+ `    - host  all  all  127.0.0.1/32  trust`,
 			},
 			{
-				oldPattern: regexp.MustCompile(`(?m)\s*- host\s+all\s+all\s+::1/128\s+md5\s*$`),
+				oldPattern: regexp.MustCompile(`- host\s+all\s+all\s+::1/128\s+md5\s*$`),
 				newLine:    `- host  all  all  ::1/128  trust`,
 			},
 		}
@@ -268,16 +269,19 @@ func waitForDatabase(timeout time.Duration) error {
 	start := time.Now()
 	for {
 		ready, err := checkPatroniStatus()
-		if err != nil {
-			return err
-		}
 		if ready {
+			fmt.Println("Database is ready for connections.")
 			return nil
+		}
+		if err != nil {
+			time.Sleep(5 * time.Second)
 		}
 		if time.Since(start) > timeout {
 			return fmt.Errorf("timeout waiting for database to be ready")
 		}
-		time.Sleep(5 * time.Second)
+		time.Sleep(2 * time.Second)
+		fmt.Println("Waiting for database to be ready...")
+		continue
 	}
 }
 
@@ -313,30 +317,55 @@ func checkPatroniStatus() (bool, error) {
 	return status.State == "running", nil
 }
 
-// runPsqlCommand executes a single SQL command
-func runPsqlCommand(sqlCommand string) error {
-	cmd := exec.Command("psql", "-U", "postgres", "-c", sqlCommand)
-	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
+// runPsqlCommand executes a single SQL command with retries
+func runPsqlCommand(sqlCommand string, maxRetries int, retryInterval time.Duration) error {
+	var stdout, stderr bytes.Buffer
 
-	err := cmd.Run()
-	if err != nil {
-		return fmt.Errorf("failed to execute psql command: %v", err)
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		cmd := exec.Command("psql", "-U", "postgres", "-c", sqlCommand)
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			// Command succeeded
+			return nil
+		}
+
+		exitErr, ok := err.(*exec.ExitError)
+		if !ok {
+			// This is not an ExitError, so it's likely a more severe issue
+			return fmt.Errorf("failed to execute psql command: %v", err)
+		}
+
+		if exitErr.ExitCode() == 1 {
+			// Exit code 1 usually means a SQL error, which we don't want to retry
+			return fmt.Errorf("SQL error: %s", stderr.String())
+		}
+
+		fmt.Printf("Command failed (attempt %d/%d): %s\nRetrying in %v...\n", attempt+1, maxRetries, stderr.String(), retryInterval)
+		time.Sleep(retryInterval)
 	}
-	return nil
+
+	return fmt.Errorf("failed to execute psql command after %d attempts: %s", maxRetries, stderr.String())
 }
 
-// runAllPsqlCommands executes all bootstrap SQL commands
+// runAllPsqlCommands executes all bootstrap SQL commands with error handling and retries
 func runAllPsqlCommands(bgCluster *bestgresv1.BGCluster, userCommands []string, c client.Client) error {
 	allCommands := getBootstrapSQL(bgCluster, userCommands, c)
+	maxRetries := 5
+	retryInterval := 5 * time.Second
+
 	for _, command := range allCommands {
 		fmt.Printf("Executing command: %s\n", command)
-		err := runPsqlCommand(command)
+		err := runPsqlCommand(command, maxRetries, retryInterval)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to execute command '%s': %v", command, err)
 		}
 	}
-	fmt.Println("Successfully executed bootstrap SQL commands")
+
+	// TODO fix message, not guaranteed to be successful here
+	// fmt.Println("Successfully executed all bootstrap SQL commands")
 	return nil
 }
 
@@ -355,7 +384,7 @@ func getBootstrapSQL(bgCluster *bestgresv1.BGCluster, userCommands []string, c c
 			fmt.Sprintf("SELECT citus_set_coordinator_host('%s', 5432);", coordinatorHost),
 		)
 		for i := range bgShardedCluster.Spec.Shards {
-			workerHost := fmt.Sprintf("%s-worker-%d", bgCluster.Name, i)
+			workerHost := fmt.Sprintf("%s-worker-%d", bgShardedCluster.Name, i)
 			systemCommands = append(systemCommands, fmt.Sprintf("SELECT * FROM citus_add_node('%s', 5432);", workerHost))
 		}
 	}

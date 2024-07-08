@@ -44,9 +44,9 @@ func (r *BGClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
     if err := r.reconcileStatefulSet(ctx, bgCluster); err != nil {
         return ctrl.Result{}, err
     }
-    if err := r.reconcileEndpoints(ctx, bgCluster); err != nil {
-        return ctrl.Result{}, err
-    }
+    // if err := r.reconcileEndpoints(ctx, bgCluster); err != nil {
+    //     return ctrl.Result{}, err
+    // }
     if err := r.reconcileService(ctx, bgCluster); err != nil {
         return ctrl.Result{}, err
     }

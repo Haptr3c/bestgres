@@ -58,48 +58,6 @@ func (r *BGClusterReconciler) reconcileHeadlessService(ctx context.Context, bgCl
     return nil
 }
 
-func (r *BGClusterReconciler) reconcileEndpoints(ctx context.Context, bgCluster *bestgresv1.BGCluster) error {
-    log := ctrl.LoggerFrom(ctx)
-    endpoints := &corev1.Endpoints{
-        ObjectMeta: metav1.ObjectMeta{
-            Name:      bgCluster.Name,
-            Namespace: bgCluster.Namespace,
-            Labels:    labelsForBGCluster(bgCluster.Name),
-        },
-        Subsets: []corev1.EndpointSubset{},
-    }
-    
-    if err := ctrl.SetControllerReference(bgCluster, endpoints, r.Scheme); err != nil {
-        return err
-    }
-
-    foundEndpoints := &corev1.Endpoints{}
-    err := r.Get(ctx, types.NamespacedName{Name: endpoints.Name, Namespace: endpoints.Namespace}, foundEndpoints)
-    if err != nil {
-        if errors.IsNotFound(err) {
-            log.Info("Creating a new Endpoints", "Endpoints.Namespace", endpoints.Namespace, "Endpoints.Name", endpoints.Name)
-            err = r.Create(ctx, endpoints)
-            if err != nil {
-                log.Error(err, "Failed to create new Endpoints", "Endpoints.Namespace", endpoints.Namespace, "Endpoints.Name", endpoints.Name)
-                return err
-            }
-        } else {
-            log.Error(err, "Failed to get Endpoints")
-            return err
-        }
-    } else {
-        log.Info("Updating existing Endpoints", "Endpoints.Namespace", foundEndpoints.Namespace, "Endpoints.Name", foundEndpoints.Name)
-        endpoints.ResourceVersion = foundEndpoints.ResourceVersion
-        err = r.Update(ctx, endpoints)
-        if err != nil {
-            log.Error(err, "Failed to update Endpoints", "Endpoints.Namespace", endpoints.Namespace, "Endpoints.Name", endpoints.Name)
-            return err
-        }
-    }
-
-    return nil
-}
-
 func (r *BGClusterReconciler) reconcileService(ctx context.Context, bgCluster *bestgresv1.BGCluster) error {
     log := ctrl.LoggerFrom(ctx)
     svc := &corev1.Service{
@@ -163,7 +121,7 @@ func (r *BGClusterReconciler) reconcileReplicaService(ctx context.Context, bgClu
                 TargetPort: intstr.FromInt(5432),
             }},
             Selector: map[string]string{
-                "application":  "patroni",
+                "application":  "bestgres",
                 "cluster-name": bgCluster.Name,
                 "role":         "replica",
             },

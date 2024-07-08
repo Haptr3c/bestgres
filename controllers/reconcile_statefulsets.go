@@ -120,6 +120,7 @@ func (r *BGClusterReconciler) createEnvironmentVariables(bgCluster *bestgresv1.B
 		{Name: "DCS_ENABLE_KUBERNETES_API", Value: "true"},
 		{Name: "PATRONI_KUBERNETES_USE_ENDPOINTS", Value: "false"},
 		{Name: "PATRONI_LOG_LEVEL", Value: bgCluster.Spec.PatroniLogLevel},
+		{Name: "BGMON_LISTEN_IP", Value: "*"},
 		{Name: "KUBERNETES_USE_CONFIGMAPS", Value: "true"},
 		{Name: "KUBERNETES_SCOPE_LABEL", Value: "cluster-name"},
 		{Name: "KUBERNETES_ROLE_LABEL", Value: "role"},
@@ -163,7 +164,7 @@ func (r *BGClusterReconciler) createVolumeClaimTemplates(bgCluster *bestgresv1.B
 
 func (r *BGClusterReconciler) getLabelsAndAnnotations(bgCluster *bestgresv1.BGCluster) map[string]string {
 	labels := map[string]string{
-		"application":  "patroni",
+		"application":  "bestgres",
 		"cluster-name": bgCluster.Name,
 	}
 

@@ -3,7 +3,6 @@ package controllers
 import (
 	bestgresv1 "bestgres/api/v1"
 	"context"
-	"encoding/base64"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -38,21 +37,21 @@ func (r *BGClusterReconciler) reconcileSecret(ctx context.Context, bgCluster *be
         if err != nil {
             return err
         }
-        secret.Data["superuser-password"] = []byte(base64.StdEncoding.EncodeToString([]byte(password)))
+        secret.Data["superuser-password"] = []byte(password)
     }
     if _, exists := secret.Data["replication-password"]; !exists {
         password, err := generateRandomPassword(16)
         if err != nil {
             return err
         }
-        secret.Data["replication-password"] = []byte(base64.StdEncoding.EncodeToString([]byte(password)))
+        secret.Data["replication-password"] = []byte(password)
     }
     if _, exists := secret.Data["admin-password"]; !exists {
         password, err := generateRandomPassword(16)
         if err != nil {
             return err
         }
-        secret.Data["admin-password"] = []byte(base64.StdEncoding.EncodeToString([]byte(password)))
+        secret.Data["admin-password"] = []byte(password)
     }
 
     // Create or update the secret

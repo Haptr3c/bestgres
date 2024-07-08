@@ -15,7 +15,7 @@
 - [x] implement initContainer/controller pattern
 - [x] add support for db replicas
 - [x] add support for bgshardedclusters
-  - [ ] get citus working on shards
+  - [x] get citus working on shards
   - [ ] cleanup icky bootstrap code
 - [ ] remove and test without endpoints perms
 - [ ] get sgdbops communications working
