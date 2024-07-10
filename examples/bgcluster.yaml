@@ -5,8 +5,9 @@ metadata:
   name: bgcluster
 spec:
   instances: 2
-  persistentVolumeSize: "1Gi"
-  storageClass: "hostpath"
+  volumeSpec:
+    persistentVolumeSize: "1Gi"
+    storageClass: "hostpath"
   patroniLogLevel: "INFO"
   image:
     tag: spilo:16

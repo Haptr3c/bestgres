@@ -54,6 +54,9 @@ spec:
                     - /bin/sh
                     - /launch.sh
                     - init
+                    description: |-
+                      The command to run when the container starts
+                      Make sure to set this if the image does not use the default spilo command
                     items:
                       type: string
                     type: array
@@ -66,20 +69,33 @@ spec:
                 - tag
                 type: object
               instances:
+                default: 1
+                description: |-
+                  The number of instances in the cluster
+                  Multiple instances will configure themselves as a Patroni HA cluster
                 format: int32
+                minimum: 0
                 type: integer
               patroniLogLevel:
                 default: INFO
                 type: string
-              persistentVolumeSize:
-                type: string
-              storageClass:
-                type: string
+              volumeSpec:
+                description: VolumeSpec defines the volume configuration
+                properties:
+                  persistentVolumeSize:
+                    description: The size of the persistent volume
+                    type: string
+                  storageClass:
+                    description: The storage class to use for the persistent volume
+                    type: string
+                required:
+                - persistentVolumeSize
+                - storageClass
+                type: object
             required:
             - image
             - instances
-            - persistentVolumeSize
-            - storageClass
+            - volumeSpec
             type: object
           status:
             description: BGClusterStatus defines the observed state of BGCluster

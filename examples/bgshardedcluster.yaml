@@ -4,16 +4,18 @@ kind: BGShardedCluster
 metadata:
   name: bgshardedcluster
 spec:
-  shards: 3
+  shards: 2
   coordinator:
     instances: 1
-    persistentVolumeSize: "1Gi"
-    storageClass: "hostpath"
+    volumeSpec:
+      persistentVolumeSize: 1Gi
+      storageClass: hostpath
     image:
       tag: spilo:16-citus
   workers:
     instances: 1
-    persistentVolumeSize: "1Gi"
-    storageClass: "hostpath"
+    volumeSpec:
+      persistentVolumeSize: 1Gi
+      storageClass: hostpath
     image:
       tag: spilo:16-citus

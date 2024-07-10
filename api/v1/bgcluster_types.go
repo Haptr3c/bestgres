@@ -22,12 +22,13 @@ type BGCluster struct {
 
 // BGClusterSpec defines the desired state of BGCluster
 type BGClusterSpec struct {
-	// +kubebuilder:validation:Required
+	// The number of instances in the cluster
+	// Multiple instances will configure themselves as a Patroni HA cluster
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default=1
 	Instances int32 `json:"instances"`
 	// +kubebuilder:validation:Required
-	PersistentVolumeSize string `json:"persistentVolumeSize"`
-	// +kubebuilder:validation:Required
-	StorageClass string `json:"storageClass"`
+	VolumeSpec VolumeSpec `json:"volumeSpec"`
 	// +kubebuilder:validation:Required
 	Image ImageSpec `json:"image"`
 	// +kubebuilder:default="INFO"
@@ -42,8 +43,20 @@ type ImageSpec struct {
 	Tag string `json:"tag"`
 	// +kubebuilder:default="/home/postgres"
 	WorkingDir string `json:"workingDir,omitempty"`
+	// The command to run when the container starts
+	// Make sure to set this if the image does not use the default spilo command
 	// +kubebuilder:default={"/bin/sh", "/launch.sh", "init"}
 	Command []string `json:"command,omitempty"`
+}
+
+// VolumeSpec defines the volume configuration
+type VolumeSpec struct {
+	// The size of the persistent volume
+	// +kubebuilder:validation:Required
+	PersistentVolumeSize string `json:"persistentVolumeSize"`
+	// The storage class to use for the persistent volume
+	// +kubebuilder:validation:Required
+	StorageClass string `json:"storageClass"`
 }
 
 // BGClusterStatus defines the observed state of BGCluster

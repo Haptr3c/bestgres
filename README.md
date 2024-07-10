@@ -1,8 +1,10 @@
+# Bestgres
 
 ## Principles
+
 - Minimal dependencies for security and simplicity
 - Uses vanila or user-supplied images and maintains full compatibility with upstream patroni
-- No: 
+- No:
   - Webhooks
   - pods/exec
   - cluster-scoped resources
@@ -12,35 +14,51 @@
 - Airgapped-ready
 
 ## TODO
+
 - [x] implement initContainer/controller pattern
 - [x] add support for db replicas
 - [x] remove and test without endpoints perms
+- [x] cleanup icky controller/bootstrap code
 - [x] add support for bgshardedclusters
   - [x] get citus working on shards
-  - [ ] add signaling for coordinator/workers
-- [ ] cleanup icky controller/bootstrap code
-- [ ] get sgdbops communications working
+  - [x] add signaling for coordinator/workers
+    - [x] bgshardedcluster lists all shards via annotation on coordinator
+    - [x] operator reconciliation reads and updates shard list
+    - [x] workers update shard annotations as they come online
+    - [x] coordinator adds workers to citus as they report via annotations
+- [ ] setup a proper logger for the controller
+- [ ] fix replicas
+- [ ] get bgdbops communications working
+- [ ] add spindown safety
+  - [ ] add finalizers
+  - [ ] add clean db shutdown handling
+  - [ ] handle main process better (stop controller when main crashes)
+- [ ] add db restart bgdbops
+- [ ] add db restart bgshardeddbops
 - [ ] polish user experience
+  - [ ] add cr status
   - [ ] better error messages
   - [ ] cleaner/better CRD structure
+- [ ] test/handle adding/removing shards
+- [ ] add auto-rebalance on shard addition (with option to disable)
 - [ ] add support for pgbackups
 - [ ] add support for pgrestores
-- [ ] add support for arbitrary pg extensions via oci image
 - [ ] add support for pgupgrades
+- [ ] add controller handling for replicas of sharded clusters
+- [ ] (maybe) add support for arbitrary pg extensions via oci image
 
 Prompt:
-```
-You are creating "Bestgres" the best postgres kubernetes operator
 
-The core principles of the operator are:
-- Minimal dependencies for security and simplicity
-- Uses vanila or user-supplied images and maintains full compatibility with upstream patroni
-- No: 
-  - Webhooks
-  - pods/exec
-  - cluster-scoped resources
-  - cluster-scoped permissions
-  - running as root
-  - use of endpoints
-
-```
+> You are creating "Bestgres" the best postgres kubernetes operator
+>
+> The core principles of the operator are:
+>
+> - Minimal dependencies for security and simplicity
+> - Uses vanila or user-supplied images and maintains full compatibility with upstream patroni
+> - No:
+>   - Webhooks
+>   - pods/exec
+>   - cluster-scoped resources
+>   - cluster-scoped permissions
+>   - running as root
+>   - use of endpoints

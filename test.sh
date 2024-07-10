@@ -14,8 +14,14 @@ kubectl delete pvc pgdata-bgshardedcluster-worker-1-0 || true
 kubectl delete pvc controller-bgshardedcluster-coordinator-0 || true
 kubectl delete pvc controller-bgshardedcluster-worker-0-0 || true
 kubectl delete pvc controller-bgshardedcluster-worker-1-0 || true
+kubectl delete cm bgcluster-0-leader || true
+kubectl delete cm bgcluster-1-leader || true
+kubectl delete cm bgshardedcluster-worker-0-leader || true
+kubectl delete cm bgshardedcluster-worker-1-leader || true
+kubectl delete cm bgshardedcluster-coordinator-leader || true
 
 kubectl delete crd bgclusters.bestgres.io || true
+kubectl delete crd bgshardedclusters.bestgres.io || true
 kubectl delete crd bgdbops.bestgres.io || true
 
 make

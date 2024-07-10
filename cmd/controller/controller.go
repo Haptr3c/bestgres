@@ -27,105 +27,59 @@ import (
 )
 
 const (
-	bgClusterInitializedAnnotation = "bgcluster.bestgres.io/initialized"
-	bgDbOpsPendingAnnotation       = "bgdbops.bestgres.io/pending"
-	bgDbOpsOpAnnotation            = "bgdbops.bestgres.io/op"
+	bgClusterInitializedAnnotation 	  = "bgcluster.bestgres.io/initialized"
+	bgShardedClusterWorkersAnnotation = "bgshardedcluster.bestgres.io/workers"
+	bgDbOpsPendingAnnotation          = "bgdbops.bestgres.io/pending"
+	bgDbOpsOpAnnotation               = "bgdbops.bestgres.io/op"
+	bgClusterRoleLabel        		  = "bgcluster.bestgres.io/role"
+	bgClusterPartOfLabel   		      = "bgcluster.bestgres.io/part-of"
 )
 
 // RunController is the main entry point for the controller
 func RunController() {
 	podName, namespace := getPodInfo()
 	c := createClient()
-	statefulSet, bgCluster := getResources(podName, namespace, c)
+	bgCluster := getResources(podName, namespace, c)
 	
+	// first we need to modify the spilo configuration
 	hackConfigs(bgCluster)
-	runCommand(bgCluster)
+	// then we run the main container command
+	runContainerCommand(bgCluster)
+
+	// wait for the database to be ready
+	// otherwise we can't run any SQL commands
 	err := waitForDatabase(5 * time.Minute)
 	if err != nil {
 		fmt.Printf("Error waiting for database: %v\n", err)
 		os.Exit(1)
 	}
-	reconciliationLoop(statefulSet, bgCluster, namespace, c)
+
+	// run the appropriate bootstrap commands based on the BGCluster type
+	switch {
+	case !isPartOfShardedCluster(bgCluster):
+		bootstrapStandaloneBGCluster(bgCluster, c)
+	case isWorkerNode(bgCluster):
+		bootstrapWorkerNode(bgCluster, c)
+	case isCoordinatorNode(bgCluster):
+		bootstrapCoordinatorNode(bgCluster, c)
+	default:
+		fmt.Println("Cannot determine BGCluster type. Exiting.")
+		os.Exit(1)
+	}
+
+	reconciliationLoop(bgCluster, c)
 }
 
-// getPodInfo retrieves the pod name and namespace from environment variables
-func getPodInfo() (string, string) {
-	podName := os.Getenv("POD_NAME")
-	namespace := os.Getenv("POD_NAMESPACE")
+////////////////////////////////////////
+//         Run once functions         //
+////////////////////////////////////////
 
-	if podName == "" || namespace == "" {
-		fmt.Println("POD_NAME or POD_NAMESPACE environment variables are not set")
-		os.Exit(1)
-	}
-
-	return podName, namespace
-}
-
-// createClient creates a new Kubernetes client
-func createClient() client.Client {
-	cfg, err := config.GetConfig()
-	if err != nil {
-		fmt.Printf("Error getting config: %v\n", err)
-		os.Exit(1)
-	}
-
-	err = bestgresv1.AddToScheme(scheme.Scheme)
-	if err != nil {
-		fmt.Printf("Error adding bestgres scheme: %v\n", err)
-		os.Exit(1)
-	}
-
-	c, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
-	if err != nil {
-		fmt.Printf("Error creating client: %v\n", err)
-		os.Exit(1)
-	}
-
-	return c
-}
-
-// getResources retrieves the StatefulSet and BGCluster resources
-func getResources(podName, namespace string, c client.Client) (*appsv1.StatefulSet, *bestgresv1.BGCluster) {
-	pod := &corev1.Pod{}
-	err := c.Get(context.TODO(), types.NamespacedName{Name: podName, Namespace: namespace}, pod)
-	if err != nil {
-		fmt.Printf("Error getting pod: %v\n", err)
-		os.Exit(1)
-	}
-
-	for _, owner := range pod.OwnerReferences {
-		if owner.Kind == "StatefulSet" {
-			statefulSet := &appsv1.StatefulSet{}
-			err = c.Get(context.TODO(), types.NamespacedName{Name: owner.Name, Namespace: namespace}, statefulSet)
-			if err != nil {
-				fmt.Printf("Error getting StatefulSet: %v\n", err)
-				os.Exit(1)
-			}
-
-			for _, ssOwner := range statefulSet.OwnerReferences {
-				if ssOwner.Kind == "BGCluster" {
-					bgCluster := &bestgresv1.BGCluster{}
-					err = c.Get(context.TODO(), types.NamespacedName{Name: ssOwner.Name, Namespace: namespace}, bgCluster)
-					if err != nil {
-						fmt.Printf("Error getting BGCluster: %v\n", err)
-						os.Exit(1)
-					}
-					return statefulSet, bgCluster
-				}
-			}
-		}
-	}
-
-	fmt.Println("Could not find owning StatefulSet or BGCluster")
-	os.Exit(1)
-	return nil, nil
-}
 
 // hackConfigs modifies the Spilo configuration for sharded clusters
 func hackConfigs(bgCluster *bestgresv1.BGCluster) {
 	sharedPreloadConfig := "shared_preload_libraries: 'citus,bg_mon"
 
-	if _, exists := bgCluster.Labels["bestgres.io/part-of"]; exists {
+	if _, exists := bgCluster.Labels[bgClusterPartOfLabel]; exists {
 		filePath := "/scripts/configure_spilo.py"
 		input, err := os.ReadFile(filePath)
 		if err != nil {
@@ -175,7 +129,7 @@ func hackConfigs(bgCluster *bestgresv1.BGCluster) {
 }
 
 // runCommand executes the main container command
-func runCommand(bgCluster *bestgresv1.BGCluster) {
+func runContainerCommand(bgCluster *bestgresv1.BGCluster) {
 	command := bgCluster.Spec.Image.Command
 	workingDir := bgCluster.Spec.Image.WorkingDir
 
@@ -202,65 +156,222 @@ func runCommand(bgCluster *bestgresv1.BGCluster) {
 	fmt.Printf("Started command: %s\n", strings.Join(command, " "))
 }
 
+func bootstrapStandaloneBGCluster(bgCluster *bestgresv1.BGCluster, c client.Client) {
+	userBootstrap := bgCluster.Spec.BootstrapSQL
+	
+	time.Sleep(5 * time.Second)
+	// TODO remove the sleep after fixing db readiness check
+	// wait for postgres to actually be ready
+	fmt.Println("Running BGCluster bootstrap")
+	if err := runPsqlCommands(bgCluster, userBootstrap); err != nil {
+		fmt.Errorf("Failed to run bootstrap SQL commands: %v\n", err)
+		// may want to exit here if the bootstrap commands are critical
+		// os.Exit(1)
+	}
+	if err := updateAnnotation(bgCluster, c, bgClusterInitializedAnnotation, "true"); err != nil {
+		fmt.Errorf("Bootstrapping complete but annoation not updated for BGCluster: %v\n", err)
+	}
+}
+
+func bootstrapWorkerNode(bgCluster *bestgresv1.BGCluster, c client.Client) {
+	var systemCommands []string
+	userCommands := bgCluster.Spec.BootstrapSQL
+	
+	time.Sleep(5 * time.Second)
+	// TODO remove the sleep after fixing db readiness check
+	// wait for postgres to actually be ready
+	fmt.Println("Running worker node bootstrap")
+
+	// Add the Citus extension
+	systemCommands = append(systemCommands, "CREATE EXTENSION IF NOT EXISTS citus;")
+	// Add any user-defined commands
+
+	// Run the SQL system commands
+	if err := runPsqlCommands(bgCluster, systemCommands); err != nil {
+		fmt.Errorf("Failed to run system bootstrap SQL commands: %v\n", err)
+		os.Exit(1)
+	}
+	// Run the SQL user commands
+	if err := runPsqlCommands(bgCluster, userCommands); err != nil {
+		fmt.Errorf("Failed to run user bootstrap SQL commands: %v\n", err)
+	}
+	if err := updateAnnotation(bgCluster, c, bgClusterInitializedAnnotation, "true"); err != nil {
+		// TODO add error status to BGCluster
+		// fmt.Errorf("Bootstrapping complete but annoation not updated for BGCluster: %v\n", err)
+	}
+}
+
+func bootstrapCoordinatorNode(bgCluster *bestgresv1.BGCluster, c client.Client) {
+	var systemCommands []string
+	userCommands := bgCluster.Spec.BootstrapSQL
+	// TODO remove the sleep after fixing db readiness check
+	// wait for postgres to actually be ready (patroni readiness check apparently is not good enough)
+	time.Sleep(5 * time.Second)
+	fmt.Println("Running coordinator node bootstrap")
+
+	// Add the Citus extension
+	systemCommands = append(systemCommands, "CREATE EXTENSION IF NOT EXISTS citus;")
+	// Set the coordinator host
+	coordinatorHost := bgCluster.Name + "-coordinator"
+	systemCommands = append(systemCommands, fmt.Sprintf("SELECT citus_set_coordinator_host('%s', 5432);", coordinatorHost))
+	
+	// Run the SQL system commands
+	if err := runPsqlCommands(bgCluster, systemCommands); err != nil {
+		fmt.Errorf("Failed to run system bootstrap SQL commands: %v\n", err)
+		os.Exit(1)
+	}
+	
+	// TODO fix the logic here, right now it waits for workers in sequence
+	// Wait for workers to initiatalize and add them to the coordinator
+	workerListJSON, exists := bgCluster.Annotations[bgShardedClusterWorkersAnnotation]
+	if !exists {
+		fmt.Errorf("annotation %s does not exist", bgShardedClusterWorkersAnnotation)
+	}
+	// Unmarshal the JSON array into a slice of strings
+	var workerList []string
+	if err := json.Unmarshal([]byte(workerListJSON), &workerList); err != nil {
+		fmt.Errorf("failed to unmarshal worker list from annotation: %w", err)
+	}
+
+	for _, worker := range workerList {
+		fmt.Printf("List of workers:\n%s", bgCluster.Annotations[bgShardedClusterWorkersAnnotation])
+		fmt.Printf("Adding worker node %s to coordinator", worker)
+	
+		// calculate the correct annotation to wait for
+		annotation := fmt.Sprintf("bgshardedcluster.bestgres.io/%s-initialized", worker)
+		// wait for that annotation to bet set to true
+		waitForInitilizatedAnnotation(bgCluster, c, 2 * time.Minute, annotation)
+		// calculate the sql command to add the worker to the coordinator
+		command := fmt.Sprintf("SELECT * FROM citus_add_node('%s', 5432);", worker)
+		// run the command
+		if err := runPsqlCommand(command, 5, 5 * time.Second); err != nil {
+			fmt.Errorf("Failed to add worker node %s to coordinator: %v\n", worker, err)
+		}
+	}
+	
+	// Run the SQL user commands
+	if err := runPsqlCommands(bgCluster, userCommands); err != nil {
+		fmt.Errorf("Failed to run user bootstrap SQL commands: %v\n", err)
+	}
+	if err := updateAnnotation(bgCluster, c, bgClusterInitializedAnnotation, "true"); err != nil {
+		// TODO add error status to BGCluster
+		// fmt.Errorf("Bootstrapping complete but annoation not updated for BGCluster: %v\n", err)
+	}
+}
+	
+////////////////////////////////////////
+//           Loop functions           //
+////////////////////////////////////////
+
 // reconciliationLoop continuously checks for updates and performs reconciliation
-func reconciliationLoop(statefulSet *appsv1.StatefulSet, bgCluster *bestgresv1.BGCluster, namespace string, c client.Client) {
+func reconciliationLoop(bgCluster *bestgresv1.BGCluster, c client.Client) {
 	for {
-		err := c.Get(context.TODO(), types.NamespacedName{Name: bgCluster.Name, Namespace: namespace}, bgCluster)
-		if err != nil {
-			fmt.Printf("Error refreshing BGCluster: %v\n", err)
-			time.Sleep(5 * time.Second)
-			continue
+		refreshContext(bgCluster, c)
+		time.Sleep(2 * time.Second)
+		for annotation := range bgCluster.Annotations {
+			value := checkAnnotation(bgCluster, annotation)
+			if annotation == bgDbOpsPendingAnnotation {
+				if value == "true" {
+					// TODO handle BGDbOps
+				// 	if err := handleBgDbOps(bgCluster); err != nil {
+				// 		fmt.Errorf("Failed to handle BGDbOps: %v\n", err)
+				// }
+				}
+			}
 		}
-
-		err = c.Get(context.TODO(), types.NamespacedName{Name: statefulSet.Name, Namespace: namespace}, statefulSet)
-		if err != nil {
-			fmt.Printf("Error refreshing StatefulSet: %v\n", err)
-			time.Sleep(5 * time.Second)
-			continue
-		}
-
-		checkAnnotations(bgCluster, statefulSet, c)
-
 		time.Sleep(2 * time.Second)
 	}
 }
 
-// checkAnnotations processes annotations and performs necessary actions
-func checkAnnotations(bgCluster *bestgresv1.BGCluster, statefulSet *appsv1.StatefulSet, c client.Client) {
-	ctx := context.TODO()
+// placeholder code for handling bgdbops
+// func handleBgDbOps(bgCluster *bestgresv1.BGCluster) error {
+// 	// get the operation
+// 	op := checkAnnotation(bgCluster, bgDbOpsOpAnnotation)
+// 	switch op {
+// 		case "backup":
+// 	}
+// 	return nil
+// }
 
-	if bgCluster.Annotations == nil {
-		bgCluster.Annotations = make(map[string]string)
-	}
+// checkAnnotations checks for annotations and returns the value
+func checkAnnotation(bgCluster *bestgresv1.BGCluster, annotation string) string {
+	return bgCluster.Annotations[annotation]
+}
+// fmt.Printf("Annotation: %s\n", annotation)
+// fmt.Printf("Annotation value: %s\n", bgCluster.Annotations[annotation])
 
-	if value, exists := bgCluster.Annotations[bgClusterInitializedAnnotation]; exists {
-		userBootstrap := bgCluster.Spec.BootstrapSQL
-		if value != "true" {
-			fmt.Println("BGCluster not initialized")
-			runAllPsqlCommands(bgCluster, userBootstrap, c)
-			bgCluster.Annotations[bgClusterInitializedAnnotation] = "true"
-			if err := c.Update(ctx, bgCluster); err != nil {
-				fmt.Printf("Failed to update BGCluster: %v\n", err)
-			}
+////////////////////////////////////////
+//          Helper functions          //
+////////////////////////////////////////
+
+
+// runAllPsqlCommands executes all SQL commands with error handling and retries
+func runPsqlCommands(bgCluster *bestgresv1.BGCluster, commands []string) error {
+	maxRetries := 5
+	retryInterval := 5 * time.Second
+
+	for _, command := range commands {
+		fmt.Printf("Executing command: %s\n", command)
+		if err := runPsqlCommand(command, maxRetries, retryInterval); err != nil {
+			fmt.Errorf("failed to execute command '%s': %v", command, err)
+			return err
 		}
-	} else {
-		fmt.Println("BGCluster not initialized")
-		bgCluster.Annotations[bgClusterInitializedAnnotation] = "false"
-		if err := c.Update(ctx, bgCluster); err != nil {
-			fmt.Printf("Failed to update BGCluster: %v\n", err)
-		}
 	}
-
-	// Log other annotations
-	logAnnotation(bgCluster.Annotations, bgDbOpsPendingAnnotation, "DB Ops pending")
-	logAnnotation(bgCluster.Annotations, bgDbOpsOpAnnotation, "DB Ops operation")
-	logAnnotation(statefulSet.Annotations, bgClusterInitializedAnnotation, "StatefulSet initialized")
+	return nil
 }
 
-// logAnnotation is a helper function to log annotation values
-func logAnnotation(annotations map[string]string, key, description string) {
-	if value, exists := annotations[key]; exists {
-		fmt.Printf("%s: %s\n", description, value)
+// runPsqlCommand executes a single SQL command with retries
+func runPsqlCommand(sqlCommand string, maxRetries int, retryInterval time.Duration) error {
+	var stdout, stderr bytes.Buffer
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		cmd := exec.Command("psql", "-U", "postgres", "-c", sqlCommand)
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err == nil {
+			// Command succeeded
+			return nil
+		}
+
+		exitErr, ok := err.(*exec.ExitError)
+		if !ok {
+			// This is not an ExitError, so it's likely a more severe issue
+			return fmt.Errorf("failed to execute psql command: %v", err)
+		}
+
+		if exitErr.ExitCode() == 1 {
+			// Exit code 1 usually means a SQL error, which we don't want to retry
+			return fmt.Errorf("SQL error: %s", stderr.String())
+		}
+
+		fmt.Printf("Command failed (attempt %d/%d): %s\nRetrying in %v...\n", attempt+1, maxRetries, stderr.String(), retryInterval)
+		time.Sleep(retryInterval)
+	}
+
+	return fmt.Errorf("failed to execute psql command after %d attempts: %s", maxRetries, stderr.String())
+}
+
+func waitForInitilizatedAnnotation(bgCluster *bestgresv1.BGCluster, c client.Client, timeout time.Duration, annotation string) error {
+	start := time.Now()
+	for {
+		refreshContext(bgCluster, c)
+		ready := checkAnnotation(bgCluster, annotation)
+		fmt.Printf("ready variable: %s\n", ready)
+		if ready == "true"{
+			fmt.Println("Database is ready for connections.")
+			return nil
+		} else {
+			fmt.Printf("Waiting for %s\n", annotation)
+			time.Sleep(5 * time.Second)
+		}
+		if time.Since(start) > timeout {
+			return fmt.Errorf("timeout waiting for database to be ready")
+		}
+		time.Sleep(2 * time.Second)
+		fmt.Println("Waiting for database to be ready...")
+		continue
 	}
 }
 
@@ -317,95 +428,110 @@ func checkPatroniStatus() (bool, error) {
 	return status.State == "running", nil
 }
 
-// runPsqlCommand executes a single SQL command with retries
-func runPsqlCommand(sqlCommand string, maxRetries int, retryInterval time.Duration) error {
-	var stdout, stderr bytes.Buffer
 
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		cmd := exec.Command("psql", "-U", "postgres", "-c", sqlCommand)
-		cmd.Stdout = &stdout
-		cmd.Stderr = &stderr
-
-		err := cmd.Run()
-		if err == nil {
-			// Command succeeded
-			return nil
-		}
-
-		exitErr, ok := err.(*exec.ExitError)
-		if !ok {
-			// This is not an ExitError, so it's likely a more severe issue
-			return fmt.Errorf("failed to execute psql command: %v", err)
-		}
-
-		if exitErr.ExitCode() == 1 {
-			// Exit code 1 usually means a SQL error, which we don't want to retry
-			return fmt.Errorf("SQL error: %s", stderr.String())
-		}
-
-		fmt.Printf("Command failed (attempt %d/%d): %s\nRetrying in %v...\n", attempt+1, maxRetries, stderr.String(), retryInterval)
-		time.Sleep(retryInterval)
+// TODO simplify this - probalby overly complicated and not truly needed
+// getResources retrieves the StatefulSet and BGCluster resources
+func getResources(podName, namespace string, c client.Client) (*bestgresv1.BGCluster) {
+	pod := &corev1.Pod{}
+	err := c.Get(context.TODO(), types.NamespacedName{Name: podName, Namespace: namespace}, pod)
+	if err != nil {
+		fmt.Printf("Error getting pod: %v\n", err)
+		os.Exit(1)
 	}
 
-	return fmt.Errorf("failed to execute psql command after %d attempts: %s", maxRetries, stderr.String())
-}
-
-// runAllPsqlCommands executes all bootstrap SQL commands with error handling and retries
-func runAllPsqlCommands(bgCluster *bestgresv1.BGCluster, userCommands []string, c client.Client) error {
-	allCommands := getBootstrapSQL(bgCluster, userCommands, c)
-	maxRetries := 5
-	retryInterval := 5 * time.Second
-
-	for _, command := range allCommands {
-		fmt.Printf("Executing command: %s\n", command)
-		err := runPsqlCommand(command, maxRetries, retryInterval)
-		if err != nil {
-			return fmt.Errorf("failed to execute command '%s': %v", command, err)
-		}
-	}
-
-	// TODO fix message, not guaranteed to be successful here
-	// fmt.Println("Successfully executed all bootstrap SQL commands")
-	return nil
-}
-
-// getBootstrapSQL generates the bootstrap SQL commands based on the cluster role
-func getBootstrapSQL(bgCluster *bestgresv1.BGCluster, userCommands []string, c client.Client) []string {
-	var systemCommands []string
-
-	switch bgCluster.Labels["bestgres.io/role"] {
-	case "worker":
-		systemCommands = append(systemCommands, "CREATE EXTENSION IF NOT EXISTS citus;")
-	case "coordinator":
-		bgShardedCluster := getBGShardedCluster(*bgCluster, c)
-		coordinatorHost := bgCluster.Name + "-coordinator"
-		systemCommands = append(systemCommands,
-			"CREATE EXTENSION IF NOT EXISTS citus;",
-			fmt.Sprintf("SELECT citus_set_coordinator_host('%s', 5432);", coordinatorHost),
-		)
-		for i := range bgShardedCluster.Spec.Shards {
-			workerHost := fmt.Sprintf("%s-worker-%d", bgShardedCluster.Name, i)
-			systemCommands = append(systemCommands, fmt.Sprintf("SELECT * FROM citus_add_node('%s', 5432);", workerHost))
-		}
-	}
-
-	return append(systemCommands, userCommands...)
-}
-
-// getBGShardedCluster retrieves the BGShardedCluster resource
-func getBGShardedCluster(bgCluster bestgresv1.BGCluster, c client.Client) *bestgresv1.BGShardedCluster {
-	for _, bgClusterOwner := range bgCluster.OwnerReferences {
-		if bgClusterOwner.Kind == "BGShardedCluster" {
-			bgShardedCluster := &bestgresv1.BGShardedCluster{}
-			err := c.Get(context.TODO(), types.NamespacedName{Name: bgClusterOwner.Name, Namespace: bgCluster.Namespace}, bgShardedCluster)
+	for _, owner := range pod.OwnerReferences {
+		if owner.Kind == "StatefulSet" {
+			statefulSet := &appsv1.StatefulSet{}
+			err = c.Get(context.TODO(), types.NamespacedName{Name: owner.Name, Namespace: namespace}, statefulSet)
 			if err != nil {
-				fmt.Printf("Error getting BGShardedCluster: %v\n", err)
+				fmt.Printf("Error getting StatefulSet: %v\n", err)
 				os.Exit(1)
 			}
-			return bgShardedCluster
+
+			for _, ssOwner := range statefulSet.OwnerReferences {
+				if ssOwner.Kind == "BGCluster" {
+					bgCluster := &bestgresv1.BGCluster{}
+					err = c.Get(context.TODO(), types.NamespacedName{Name: ssOwner.Name, Namespace: namespace}, bgCluster)
+					if err != nil {
+						fmt.Printf("Error getting BGCluster: %v\n", err)
+						os.Exit(1)
+					}
+					return bgCluster
+				}
+			}
+		fmt.Errorf("Could not find owning BGCluster for StatefulSet %s", statefulSet.Name)
 		}
+	fmt.Errorf("Could not find owning StatefulSet for Pod %s", pod.Name)
 	}
-	fmt.Println("Could not find owning BGShardedCluster")
-	os.Exit(1)
 	return nil
+}
+
+// getPodInfo retrieves the pod name and namespace from environment variables
+func getPodInfo() (string, string) {
+	podName := os.Getenv("POD_NAME")
+	namespace := os.Getenv("POD_NAMESPACE")
+
+	if podName == "" || namespace == "" {
+		fmt.Println("POD_NAME or POD_NAMESPACE environment variables are not set")
+		os.Exit(1)
+	}
+
+	return podName, namespace
+}
+
+// createClient creates a new Kubernetes client
+func createClient() client.Client {
+	cfg, err := config.GetConfig()
+	if err != nil {
+		fmt.Printf("Error getting config: %v\n", err)
+		os.Exit(1)
+	}
+
+	err = bestgresv1.AddToScheme(scheme.Scheme)
+	if err != nil {
+		fmt.Printf("Error adding bestgres scheme: %v\n", err)
+		os.Exit(1)
+	}
+
+	c, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	if err != nil {
+		fmt.Printf("Error creating client: %v\n", err)
+		os.Exit(1)
+	}
+
+	return c
+}
+
+func updateAnnotation(bgCluster *bestgresv1.BGCluster, c client.Client, key, value string) error {
+	ctx := context.TODO()
+	if bgCluster.Annotations == nil {
+		bgCluster.Annotations = make(map[string]string)
+	}
+	bgCluster.Annotations[key] = value
+	if err := c.Update(ctx, bgCluster); err != nil {
+		fmt.Printf("Failed to update BGCluster: %v\n", err)
+		return err
+	}
+	return nil
+}
+
+func refreshContext(bgCluster *bestgresv1.BGCluster, c client.Client) *bestgresv1.BGCluster {
+	err := c.Get(context.TODO(), types.NamespacedName{Name: bgCluster.Name, Namespace: bgCluster.Namespace}, bgCluster)
+	if err != nil {
+		fmt.Printf("Error refreshing BGCluster: %v\n", err)
+	}
+	return bgCluster
+}
+
+func isPartOfShardedCluster(bgCluster *bestgresv1.BGCluster) bool {
+	_, exists := bgCluster.Labels[bgClusterPartOfLabel]
+	return exists
+}
+
+func isCoordinatorNode(bgCluster *bestgresv1.BGCluster) bool {
+	return bgCluster.Labels[bgClusterRoleLabel] == "coordinator"
+}
+
+func isWorkerNode(bgCluster *bestgresv1.BGCluster) bool {
+	return bgCluster.Labels[bgClusterRoleLabel] == "worker"
 }

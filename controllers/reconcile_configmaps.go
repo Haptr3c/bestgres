@@ -91,14 +91,14 @@ func (r *BGClusterReconciler) reconcileSpiloConfigMap(ctx context.Context, bgClu
 	err = r.Get(ctx, types.NamespacedName{Name: cm.Name, Namespace: cm.Namespace}, foundCm)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("Creating Spilo ConfigMap", "ConfigMap.Namespace", cm.Namespace, "ConfigMap.Name", cm.Name)
+			log.Info("Creating ConfigMap", "ConfigMap.Namespace", cm.Namespace, "ConfigMap.Name", cm.Name)
 			return r.Create(ctx, cm)
 		}
 		return err
 	}
 
 	if foundCm.Data[configMapKey] != cm.Data[configMapKey] {
-		log.Info("Updating Spilo ConfigMap", "ConfigMap.Namespace", cm.Namespace, "ConfigMap.Name", cm.Name)
+		log.Info("Updating ConfigMap", "ConfigMap.Namespace", cm.Namespace, "ConfigMap.Name", cm.Name)
 		foundCm.Data = cm.Data
 		return r.Update(ctx, foundCm)
 	}
@@ -114,11 +114,12 @@ func (r *BGClusterReconciler) createSpiloConfiguration() (string, error) {
 				{"auth-local": "trust"},
 			},
 			"dcs": map[string]interface{}{
-				"retry_timeout": 10000,
+				"retry_timeout": 10000, // TODO Test removing this or changing it to like 30 or something
 			},
 		},
 	}
 
+	// TODO enable user-supplied configuration options
 	// // Merge user-supplied configuration
 	// if bgCluster.Spec.PostgresConf != nil {
 	// 	for key, value := range bgCluster.Spec.PostgresConf {

@@ -120,6 +120,8 @@ func (r *BGClusterReconciler) createEnvironmentVariables(bgCluster *bestgresv1.B
 		{Name: "DCS_ENABLE_KUBERNETES_API", Value: "true"},
 		{Name: "PATRONI_KUBERNETES_USE_ENDPOINTS", Value: "false"},
 		{Name: "PATRONI_LOG_LEVEL", Value: bgCluster.Spec.PatroniLogLevel},
+		// TODO Test and then set this
+		// {Name: "PATRONI_KUBERNETES_BYPASS_API_SERVICE", Value: "false"},
 		{Name: "BGMON_LISTEN_IP", Value: "*"},
 		{Name: "KUBERNETES_USE_CONFIGMAPS", Value: "true"},
 		{Name: "KUBERNETES_SCOPE_LABEL", Value: "cluster-name"},
@@ -141,10 +143,10 @@ func (r *BGClusterReconciler) createVolumeClaimTemplates(bgCluster *bestgresv1.B
 				AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 				Resources: corev1.VolumeResourceRequirements{
 					Requests: corev1.ResourceList{
-						corev1.ResourceStorage: resource.MustParse(bgCluster.Spec.PersistentVolumeSize),
+						corev1.ResourceStorage: resource.MustParse(bgCluster.Spec.VolumeSpec.PersistentVolumeSize),
 					},
 				},
-				StorageClassName: &bgCluster.Spec.StorageClass,
+				StorageClassName: &bgCluster.Spec.VolumeSpec.StorageClass,
 			},
 		},
 		{
@@ -156,7 +158,7 @@ func (r *BGClusterReconciler) createVolumeClaimTemplates(bgCluster *bestgresv1.B
 						corev1.ResourceStorage: resource.MustParse("100Mi"),
 					},
 				},
-				StorageClassName: &bgCluster.Spec.StorageClass,
+				StorageClassName: &bgCluster.Spec.VolumeSpec.StorageClass,
 			},
 		},
 	}
@@ -168,12 +170,12 @@ func (r *BGClusterReconciler) getLabelsAndAnnotations(bgCluster *bestgresv1.BGCl
 		"cluster-name": bgCluster.Name,
 	}
 
-	if bgCluster.Labels["bestgres.io/part-of"] != "" {
-		labels["bestgres.io/part-of"] = bgCluster.Labels["bestgres.io/part-of"]
+	if bgCluster.Labels["bgcluster.bestgres.io/part-of"] != "" {
+		labels["bgcluster.bestgres.io/part-of"] = bgCluster.Labels["bgcluster.bestgres.io/part-of"]
 	}
 
-	if bgCluster.Labels["bestgres.io/role"] != "" {
-		labels["bestgres.io/role"] = bgCluster.Labels["bestgres.io/role"]
+	if bgCluster.Labels["bgcluster.bestgres.io/role"] != "" {
+		labels["bgcluster.bestgres.io/role"] = bgCluster.Labels["bgcluster.bestgres.io/role"]
 	}
 
 	return labels
