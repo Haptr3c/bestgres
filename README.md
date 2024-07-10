@@ -41,6 +41,7 @@
   - [ ] cleaner/better CRD structure
 - [ ] test/handle adding/removing shards
 - [ ] add auto-rebalance on shard addition (with option to disable)
+- [ ] check if possible to leverage patroni's native citus support (may not fit reqs) [reference](https://patroni.readthedocs.io/en/latest/ENVIRONMENT.html#citus)
 - [ ] add support for pgbackups
 - [ ] add support for pgrestores
 - [ ] add support for pgupgrades
@@ -62,3 +63,7 @@ Prompt:
 >   - cluster-scoped permissions
 >   - running as root
 >   - use of endpoints
+
+## Referernce
+
+- [patroni env var settings](https://patroni.readthedocs.io/en/latest/ENVIRONMENT.html#kubernetes)

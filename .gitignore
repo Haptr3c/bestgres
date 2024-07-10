@@ -9,6 +9,11 @@
 # build files
 bin/*
 
+# temp stuff
+tmp/*
+temp/*
+*tmp*
+
 # example files
 *sgcluster*
 *patronidemo*
