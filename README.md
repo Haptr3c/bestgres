@@ -26,7 +26,7 @@
     - [x] operator reconciliation reads and updates shard list
     - [x] workers update shard annotations as they come online
     - [x] coordinator adds workers to citus as they report via annotations
-- [ ] setup a proper logger for the controller
+- [x] setup a proper logger for the controller
 - [ ] fix replicas
 - [ ] get bgdbops communications working
 - [ ] add spindown safety

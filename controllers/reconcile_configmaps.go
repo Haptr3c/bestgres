@@ -113,9 +113,9 @@ func (r *BGClusterReconciler) createSpiloConfiguration() (string, error) {
 				{"auth-host": "md5"},
 				{"auth-local": "trust"},
 			},
-			"dcs": map[string]interface{}{
-				"retry_timeout": 10000, // TODO Test removing this or changing it to like 30 or something
-			},
+			// "dcs": map[string]interface{}{
+			// 	"retry_timeout": 10000, // TODO Test removing this or changing it to like 30 or something
+			// },
 		},
 	}
 
