@@ -3,6 +3,7 @@ package controllers
 import (
 	bestgresv1 "bestgres/api/v1"
 	"context"
+	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -11,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (r *BGClusterReconciler) reconcileStatefulSet(ctx context.Context, bgCluster *bestgresv1.BGCluster) error {
@@ -31,7 +33,49 @@ func (r *BGClusterReconciler) reconcileStatefulSet(ctx context.Context, bgCluste
 		return err
 	}
 
-	return r.updateStatefulSet(ctx, sts, foundSts)
+	if err := r.updateStatefulSet(ctx, sts, foundSts); err != nil {
+		return err
+	}
+
+	// Check if all pods are initialized and update BGCluster annotation
+	return r.reconcileBGClusterInitialization(ctx, bgCluster, foundSts)
+}
+
+func (r *BGClusterReconciler) reconcileBGClusterInitialization(ctx context.Context, bgCluster *bestgresv1.BGCluster, sts *appsv1.StatefulSet) error {
+	log := ctrl.LoggerFrom(ctx)
+
+	// List all pods belonging to this StatefulSet
+	podList := &corev1.PodList{}
+	listOpts := []client.ListOption{
+		client.InNamespace(sts.Namespace),
+		client.MatchingLabels(sts.Spec.Selector.MatchLabels),
+	}
+	if err := r.List(ctx, podList, listOpts...); err != nil {
+		return fmt.Errorf("failed to list pods: %w", err)
+	}
+
+	// Check if all pods are initialized
+	allInitialized := true
+	for _, pod := range podList.Items {
+		if pod.Annotations[initializedAnnotation] != "true" {
+			allInitialized = false
+			break
+		}
+	}
+
+	// Update BGCluster annotation if all pods are initialized
+	if allInitialized && bgCluster.Annotations[initializedAnnotation] != "true" {
+		if bgCluster.Annotations == nil {
+			bgCluster.Annotations = make(map[string]string)
+		}
+		bgCluster.Annotations[initializedAnnotation] = "true"
+		if err := r.Update(ctx, bgCluster); err != nil {
+			return fmt.Errorf("failed to update BGCluster annotation: %w", err)
+		}
+		log.Info("Updated BGCluster with all-pods-initialized annotation", "BGCluster.Name", bgCluster.Name)
+	}
+
+	return nil
 }
 
 func (r *BGClusterReconciler) createStatefulSetObject(bgCluster *bestgresv1.BGCluster) *appsv1.StatefulSet {

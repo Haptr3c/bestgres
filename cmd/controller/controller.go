@@ -35,6 +35,9 @@ const (
 	bgClusterPartOfLabel   		      = "bgcluster.bestgres.io/part-of"
 )
 
+var podName = os.Getenv("POD_NAME")
+var namespace = os.Getenv("POD_NAMESPACE")
+
 func init() {
 	log.SetOutput(os.Stdout)
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
@@ -42,7 +45,6 @@ func init() {
 
 // RunController is the main entry point for the controller
 func RunController() {
-	podName, namespace := getPodInfo()
 	c := createClient()
 	bgCluster := getResources(podName, namespace, c)
 	
@@ -169,9 +171,10 @@ func bootstrapStandaloneBGCluster(bgCluster *bestgresv1.BGCluster, c client.Clie
 		// may want to exit here if the bootstrap commands are critical
 		// os.Exit(1)
 	}
-	if err := updateAnnotation(bgCluster, c, bgClusterInitializedAnnotation, "true"); err != nil {
-		log.Printf("Bootstrapping complete but annotation not updated for BGCluster: %v", err)
-	}
+
+    if err := updatePodAnnotation(c, podName, namespace, bgClusterInitializedAnnotation, "true"); err != nil {
+        log.Printf("Bootstrapping complete but annotation not updated for Pod: %v", err)
+    }
 }
 
 func bootstrapWorkerNode(bgCluster *bestgresv1.BGCluster, c client.Client) {
@@ -196,10 +199,10 @@ func bootstrapWorkerNode(bgCluster *bestgresv1.BGCluster, c client.Client) {
 	if err := runPsqlCommands(userCommands); err != nil {
 		log.Printf("Failed to run user bootstrap SQL commands: %v", err)
 	}
-	if err := updateAnnotation(bgCluster, c, bgClusterInitializedAnnotation, "true"); err != nil {
-		// TODO add error status to BGCluster
-		// log.Printf("Bootstrapping complete but annotation not updated for BGCluster: %v", err)
-	}
+
+    if err := updatePodAnnotation(c, podName, namespace, bgClusterInitializedAnnotation, "true"); err != nil {
+        log.Printf("Bootstrapping complete but annotation not updated for Pod: %v", err)
+    }
 }
 
 func bootstrapCoordinatorNode(bgCluster *bestgresv1.BGCluster, c client.Client) {
@@ -255,10 +258,9 @@ func bootstrapCoordinatorNode(bgCluster *bestgresv1.BGCluster, c client.Client) 
 	if err := runPsqlCommands(userCommands); err != nil {
 		log.Printf("Failed to run user bootstrap SQL commands: %v", err)
 	}
-	if err := updateAnnotation(bgCluster, c, bgClusterInitializedAnnotation, "true"); err != nil {
-		// TODO add error status to BGCluster
-		// log.Printf("Bootstrapping complete but annotation not updated for BGCluster: %v", err)
-	}
+    if err := updatePodAnnotation(c, podName, namespace, bgClusterInitializedAnnotation, "true"); err != nil {
+        log.Printf("Bootstrapping complete but annotation not updated for Pod: %v", err)
+    }
 }
 
 ////////////////////////////////////////
@@ -452,18 +454,6 @@ func getResources(podName, namespace string, c client.Client) *bestgresv1.BGClus
 	return nil
 }
 
-// getPodInfo retrieves the pod name and namespace from environment variables
-func getPodInfo() (string, string) {
-	podName := os.Getenv("POD_NAME")
-	namespace := os.Getenv("POD_NAMESPACE")
-
-	if podName == "" || namespace == "" {
-		log.Println("POD_NAME or POD_NAMESPACE environment variables are not set")
-		os.Exit(1)
-	}
-
-	return podName, namespace
-}
 
 // createClient creates a new Kubernetes client
 func createClient() client.Client {
@@ -488,7 +478,7 @@ func createClient() client.Client {
 	return c
 }
 
-func updateAnnotation(bgCluster *bestgresv1.BGCluster, c client.Client, key, value string) error {
+func updateBgclusterAnnotation(bgCluster *bestgresv1.BGCluster, c client.Client, key, value string) error {
 	if bgCluster.Annotations == nil {
 		bgCluster.Annotations = make(map[string]string)
 	}
@@ -498,6 +488,24 @@ func updateAnnotation(bgCluster *bestgresv1.BGCluster, c client.Client, key, val
 		return err
 	}
 	return nil
+}
+
+func updatePodAnnotation(c client.Client, podName, namespace, key, value string) error {
+    pod := &corev1.Pod{}
+    err := c.Get(context.TODO(), types.NamespacedName{Name: podName, Namespace: namespace}, pod)
+    if err != nil {
+        return fmt.Errorf("failed to get pod: %v", err)
+    }
+
+    if pod.Annotations == nil {
+        pod.Annotations = make(map[string]string)
+    }
+    pod.Annotations[key] = value
+
+    if err := c.Update(context.TODO(), pod); err != nil {
+        return fmt.Errorf("failed to update pod: %v", err)
+    }
+    return nil
 }
 
 func refreshContext(bgCluster *bestgresv1.BGCluster, c client.Client) *bestgresv1.BGCluster {
