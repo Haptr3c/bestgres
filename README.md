@@ -67,3 +67,4 @@ Prompt:
 ## Referernce
 
 - [patroni env var settings](https://patroni.readthedocs.io/en/latest/ENVIRONMENT.html#kubernetes)
+- [spilo operator options](https://postgres-operator.readthedocs.io/en/latest/reference/operator_parameters/)
