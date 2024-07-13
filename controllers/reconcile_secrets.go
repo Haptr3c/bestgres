@@ -65,7 +65,7 @@ func (r *BGClusterReconciler) reconcileSecret(ctx context.Context, bgCluster *be
             return err
         }
     } else {
-        log.Info("Updating existing secret")
+        // log.Info("Updating existing secret")
     }
 
     // Check if the BGCluster is already the owner

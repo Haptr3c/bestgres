@@ -235,8 +235,8 @@ func (r *BGClusterReconciler) createStatefulSet(ctx context.Context, sts *appsv1
 }
 
 func (r *BGClusterReconciler) updateStatefulSet(ctx context.Context, sts, foundSts *appsv1.StatefulSet) error {
-	log := ctrl.LoggerFrom(ctx)
-	log.Info("Updating existing StatefulSet", "StatefulSet.Namespace", foundSts.Namespace, "StatefulSet.Name", foundSts.Name)
+	// log := ctrl.LoggerFrom(ctx)
+	// log.Info("Updating existing StatefulSet", "StatefulSet.Namespace", foundSts.Namespace, "StatefulSet.Name", foundSts.Name)
 	sts.ResourceVersion = foundSts.ResourceVersion
 	return r.Update(ctx, sts)
 }

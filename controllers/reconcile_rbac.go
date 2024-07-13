@@ -77,7 +77,7 @@ func (r *BGClusterReconciler) reconcileRole(ctx context.Context, bgCluster *best
             return err
 		}
 		} else {
-			log.Info("Updating existing Role", "Role.Namespace", foundRole.Namespace, "Role.Name", foundRole.Name)
+			// log.Debug("Updating existing Role", "Role.Namespace", foundRole.Namespace, "Role.Name", foundRole.Name)
 			role.ResourceVersion = foundRole.ResourceVersion
 			err = r.Update(ctx, role)
 			if err != nil {
@@ -129,7 +129,7 @@ func (r *BGClusterReconciler) reconcileRoleBinding(ctx context.Context, bgCluste
 			return err
 		}
 	} else {
-		log.Info("Updating existing RoleBinding", "RoleBinding.Namespace", foundRoleBinding.Namespace, "RoleBinding.Name", foundRoleBinding.Name)
+		// log.Info("Updating existing RoleBinding", "RoleBinding.Namespace", foundRoleBinding.Namespace, "RoleBinding.Name", foundRoleBinding.Name)
 		roleBinding.ResourceVersion = foundRoleBinding.ResourceVersion
 		err = r.Update(ctx, roleBinding)
 		if err != nil {
