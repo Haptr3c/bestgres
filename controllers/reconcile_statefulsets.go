@@ -118,6 +118,9 @@ func (r *BGClusterReconciler) createEnvironmentVariables(bgCluster *bestgresv1.B
 		{Name: "POD_NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}},
 		{Name: "SCOPE", Value: bgCluster.Name},
 		{Name: "DCS_ENABLE_KUBERNETES_API", Value: "true"},
+		// TODO see if this works or remove
+		// {Name: "PATRONI_KUBERNETES_LABELS", Value: "{application: bestgres, cluster-name: " + bgCluster.Name + "}"},
+		// {Name: "KUBERNETES_LABELS", Value: "{application: bestgres, cluster-name: " + bgCluster.Name + "}"},
 		{Name: "PATRONI_KUBERNETES_USE_ENDPOINTS", Value: "false"},
 		{Name: "PATRONI_LOG_LEVEL", Value: bgCluster.Spec.PatroniLogLevel},
 		// TODO Test and then set this

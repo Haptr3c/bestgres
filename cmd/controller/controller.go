@@ -81,55 +81,52 @@ func RunController() {
 
 // hackConfigs modifies the Spilo configuration for sharded clusters
 func hackConfigs(bgCluster *bestgresv1.BGCluster) {
-	sharedPreloadConfig := "shared_preload_libraries: 'citus,bg_mon"
-
+	filePath := "/scripts/configure_spilo.py"
+	input, err := os.ReadFile(filePath)
+	if err != nil {
+		log.Printf("Error reading file %s: %v", filePath, err)
+		os.Exit(1)
+	}
+	content := string(input)
+	
 	if _, exists := bgCluster.Labels[bgClusterPartOfLabel]; exists {
-		filePath := "/scripts/configure_spilo.py"
-		input, err := os.ReadFile(filePath)
-		if err != nil {
-			log.Printf("Error reading file %s: %v", filePath, err)
-			os.Exit(1)
-		}
-
-		content := string(input)
-
+		sharedPreloadConfig := "shared_preload_libraries: 'citus,bg_mon"
 		re := regexp.MustCompile(`(?i)shared_preload_libraries:\s*.bg_mon`)
 		content = re.ReplaceAllString(content, sharedPreloadConfig)
-
-		// Replace pg_hba lines with regex
-		pgHbaReplacements := []struct {
-			oldPattern *regexp.Regexp
-			newLine    string
-		}{
-			{
-				oldPattern: regexp.MustCompile(`- host\s+all\s+all\s+127\.0\.0\.1/32\s+md5\s*`),
-				newLine:    `- host  all  all  10.0.0.0/8  trust` + "\n"+ `    - host  all  all  127.0.0.1/32  trust`,
-			},
-			{
-				oldPattern: regexp.MustCompile(`- host\s+all\s+all\s+::1/128\s+md5\s*$`),
-				newLine:    `- host  all  all  ::1/128  trust`,
-			},
-		}
-
-		for _, replacement := range pgHbaReplacements {
-			content = replacement.oldPattern.ReplaceAllString(content, replacement.newLine)
-		}
-
-		// Check if any changes were made to the file
-		if content == string(input) {
-			log.Println("No changes were made to the file.")
-			return
-		}
-
-		err = os.WriteFile(filePath, []byte(content), 0755)
-		if err != nil {
-			log.Printf("Error writing file %s: %v", filePath, err)
-			os.Exit(1)
-		}
-		log.Println("File updated successfully.")
 	} else {
 		log.Println("BGCluster is not part of a sharded cluster. No modifications needed.")
 	}
+	// Replace pg_hba lines with regex
+	pgHbaReplacements := []struct {
+		oldPattern *regexp.Regexp
+		newLine    string
+	}{
+		{
+			oldPattern: regexp.MustCompile(`- host\s+all\s+all\s+127\.0\.0\.1/32\s+md5\s*`),
+			newLine:    `- host  all  all  10.0.0.0/8  trust` + "\n"+ `    - host  all  all  127.0.0.1/32  trust`,
+		},
+		{
+			oldPattern: regexp.MustCompile(`- host\s+all\s+all\s+::1/128\s+md5\s*$`),
+			newLine:    `- host  all  all  ::1/128  trust`,
+		},
+	}
+
+	for _, replacement := range pgHbaReplacements {
+		content = replacement.oldPattern.ReplaceAllString(content, replacement.newLine)
+	}
+
+	// Check if any changes were made to the file
+	if content == string(input) {
+		log.Println("No changes were made to the file.")
+		return
+	}
+
+	err = os.WriteFile(filePath, []byte(content), 0755)
+	if err != nil {
+		log.Printf("Error writing file %s: %v", filePath, err)
+		os.Exit(1)
+	}
+	log.Println("File updated successfully.")
 }
 
 // runCommand executes the main container command
@@ -350,7 +347,6 @@ func waitForInitilizatedAnnotation(bgCluster *bestgresv1.BGCluster, c client.Cli
 	for {
 		refreshContext(bgCluster, c)
 		ready := checkAnnotation(bgCluster, annotation)
-		log.Printf("Ready variable: %s", ready)
 		if ready == "true" {
 			log.Println("Database is ready for connections.")
 			return nil
