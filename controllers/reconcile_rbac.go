@@ -169,7 +169,7 @@ func (r *BGClusterReconciler) reconcileServiceAccount(ctx context.Context, bgClu
             return err
         }
     } else {
-        log.Info("ServiceAccount already exists", "ServiceAccount.Namespace", foundSA.Namespace, "ServiceAccount.Name", foundSA.Name)
+        // log.Info("ServiceAccount already exists", "ServiceAccount.Namespace", foundSA.Namespace, "ServiceAccount.Name", foundSA.Name)
     }
 
     return nil

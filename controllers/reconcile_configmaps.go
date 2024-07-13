@@ -42,7 +42,7 @@ func (r *BGClusterReconciler) reconcileConfigMaps(ctx context.Context, bgCluster
 
 		// Check if the BGCluster is already the owner
 		if isOwnedByBGCluster(cm, bgCluster) {
-			log.Info(fmt.Sprintf("ConfigMap %s is already owned by BGCluster, skipping", cmName))
+			// log.Info(fmt.Sprintf("ConfigMap %s is already owned by BGCluster, skipping", cmName))
 			continue
 		}
 

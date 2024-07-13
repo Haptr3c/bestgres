@@ -46,7 +46,7 @@ func (r *BGClusterReconciler) reconcileHeadlessService(ctx context.Context, bgCl
             return err
         }
     } else {
-        log.Info("Updating existing Headless Service", "Service.Namespace", foundSvc.Namespace, "Service.Name", foundSvc.Name)
+        // log.Info("Updating existing Headless Service", "Service.Namespace", foundSvc.Namespace, "Service.Name", foundSvc.Name)
         svc.ResourceVersion = foundSvc.ResourceVersion
         err = r.Update(ctx, svc)
         if err != nil {
@@ -95,7 +95,7 @@ func (r *BGClusterReconciler) reconcileService(ctx context.Context, bgCluster *b
             return err
         }
     } else {
-        log.Info("Updating existing Service", "Service.Namespace", foundSvc.Namespace, "Service.Name", foundSvc.Name)
+        // log.Info("Updating existing Service", "Service.Namespace", foundSvc.Namespace, "Service.Name", foundSvc.Name)
         svc.ResourceVersion = foundSvc.ResourceVersion
         err = r.Update(ctx, svc)
         if err != nil {
@@ -148,7 +148,7 @@ func (r *BGClusterReconciler) reconcileReplicaService(ctx context.Context, bgClu
             return err
         }
     } else {
-        log.Info("Updating existing Replica Service", "Service.Namespace", foundSvc.Namespace, "Service.Name", foundSvc.Name)
+        // log.Info("Updating existing Replica Service", "Service.Namespace", foundSvc.Namespace, "Service.Name", foundSvc.Name)
         svc.ResourceVersion = foundSvc.ResourceVersion
         err = r.Update(ctx, svc)
         if err != nil {
