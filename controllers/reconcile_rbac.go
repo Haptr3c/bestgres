@@ -29,7 +29,7 @@ func (r *BGClusterReconciler) reconcileRole(ctx context.Context, bgCluster *best
             {
                 APIGroups: []string{""},
                 Resources: []string{"pods"},
-                Verbs:     []string{"get", "list", "patch", "update", "watch"},
+                Verbs:     []string{"get", "list", "patch", "update", "watch", "delete"},
             },
             {
                 APIGroups: []string{""},
@@ -37,6 +37,7 @@ func (r *BGClusterReconciler) reconcileRole(ctx context.Context, bgCluster *best
                 Verbs:     []string{"create"},
             },
             {
+                // TODO don't think this is needed anymore
                 APIGroups: []string{"apps"},
                 Resources: []string{"statefulsets"},
                 ResourceNames: []string{bgCluster.Name},
@@ -46,14 +47,19 @@ func (r *BGClusterReconciler) reconcileRole(ctx context.Context, bgCluster *best
                 APIGroups: []string{"bestgres.io"},
                 Resources: []string{"bgclusters"},
                 ResourceNames: []string{bgCluster.Name},
-                Verbs:     []string{"get", "update"},
+                Verbs:     []string{"get", "list"},
             },
             {
                 APIGroups: []string{"bestgres.io"},
                 Resources: []string{"bgshardedclusters"},
                 // TODO see if these perms can be pared down to named resource
                 // ResourceNames: []string{bgCluster.Name},
-                Verbs:     []string{"get"},
+                Verbs:     []string{"get", "list"},
+            },
+            {
+                APIGroups: []string{"bestgres.io"},
+                Resources: []string{"bgdbops"},
+                Verbs:     []string{"get", "list", "update"},
             },
         },
     }

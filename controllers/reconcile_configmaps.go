@@ -34,7 +34,7 @@ func (r *BGClusterReconciler) reconcileConfigMaps(ctx context.Context, bgCluster
 		if err != nil {
 			if errors.IsNotFound(err) {
 				// ConfigMap doesn't exist yet, which is fine
-				log.Info(fmt.Sprintf("ConfigMap %s not found, skipping", cmName))
+				// log.Info(fmt.Sprintf("ConfigMap %s not found, skipping", cmName))
 				continue
 			}
 			return err

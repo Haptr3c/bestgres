@@ -27,14 +27,14 @@
     - [x] workers update shard annotations as they come online
     - [x] coordinator adds workers to citus as they report via annotations
 - [x] setup a proper logger for the controller
-- [ ] fix replicas
-- [ ] get bgdbops communications working
+- [x] get bgdbops communications working
+- [x] add db restart bgdbops
+- [ ] add db restart bgshardeddbops
 - [ ] add spindown safety
   - [ ] add finalizers
   - [ ] add clean db shutdown handling
   - [ ] handle main process better (stop controller when main crashes)
-- [ ] add db restart bgdbops
-- [ ] add db restart bgshardeddbops
+- [ ] fix replicas
 - [ ] polish user experience
   - [ ] add cr status
   - [ ] better error messages
@@ -62,7 +62,9 @@ Prompt:
 >   - cluster-scoped resources
 >   - cluster-scoped permissions
 >   - running as root
->   - use of endpoints
+
+<!-- >   - use of endpoints -->
+
 
 ## Referernce
 

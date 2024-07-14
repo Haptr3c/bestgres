@@ -14,3 +14,24 @@
     - switched to operator handling setting "initialized" rather than controller
 4. [ ] Configmaps don't always get deleted for some reason? need to verify that they have the right ownership. Might be a race condition issue with testing script.
 5. [ ] Coordinator gets stuck with no leader configmap sometimes, need to investigate why this happens.
+6. [ ] Same as issue #1 but with the coordinator as well.
+    ```
+2024-07-14T01:58:10Z    ERROR    Failed to update BGCluster status    {"controller": "bgcluster", "controllerGroup": "bestgres.io", "controllerKind": "BGCluster", "BGCluster": {"name":"bgcluster","namespace":"default"}, "namespace": "default", "name": "bgcluster", "reconcileID": "675b9fea-ea79-4b09-b565-5a69fadd5200", "error": "Operation cannot be fulfilled on bgclusters.bestgres.io \"bgcluster\": the object has been modified; please apply your changes to the latest version and try again"}
+bestgres/controllers.(*BGClusterReconciler).Reconcile
+    /app/controllers/bgcluster_controller.go:85
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller).Reconcile
+    /go/pkg/mod/sigs.k8s.io/controller-runtime@v0.18.4/pkg/internal/controller/controller.go:114
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller).reconcileHandler
+    /go/pkg/mod/sigs.k8s.io/controller-runtime@v0.18.4/pkg/internal/controller/controller.go:311
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller).processNextWorkItem
+    /go/pkg/mod/sigs.k8s.io/controller-runtime@v0.18.4/pkg/internal/controller/controller.go:261
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller).Start.func2.2
+    /go/pkg/mod/sigs.k8s.io/controller-runtime@v0.18.4/pkg/internal/controller/controller.go:222
+2024-07-14T01:58:10Z    ERROR    Reconciler error    {"controller": "bgcluster", "controllerGroup": "bestgres.io", "controllerKind": "BGCluster", "BGCluster": {"name":"bgcluster","namespace":"default"}, "namespace": "default", "name": "bgcluster", "reconcileID": "675b9fea-ea79-4b09-b565-5a69fadd5200", "error": "Operation cannot be fulfilled on bgclusters.bestgres.io \"bgcluster\": the object has been modified; please apply your changes to the latest version and try again"}
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller).reconcileHandler
+    /go/pkg/mod/sigs.k8s.io/controller-runtime@v0.18.4/pkg/internal/controller/controller.go:324
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller).processNextWorkItem
+    /go/pkg/mod/sigs.k8s.io/controller-runtime@v0.18.4/pkg/internal/controller/controller.go:261
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller).Start.func2.2
+    /go/pkg/mod/sigs.k8s.io/controller-runtime@v0.18.4/pkg/internal/controller/controller.go:222
+    ```

@@ -1,0 +1,8 @@
+apiVersion: bestgres.io/v1
+kind: BGDbOps
+metadata:
+  name: bgdbops
+spec:
+  bgCluster: bgcluster        # Reference to the BGCluster to be restarted
+  op: restart                 # Operation type set to restart
+  maxRetries: 2               # Optional: Set maximum number of retries (default is 3)
