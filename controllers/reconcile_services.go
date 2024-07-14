@@ -121,7 +121,7 @@ func (r *BGClusterReconciler) reconcileReplicaService(ctx context.Context, bgClu
                 TargetPort: intstr.FromInt(5432),
             }},
             Selector: map[string]string{
-                "application":  "bestgres",
+                "application":  "patroni",
                 "cluster-name": bgCluster.Name,
                 "role":         "replica",
             },

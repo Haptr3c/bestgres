@@ -99,6 +99,7 @@ rules:
   - ""
   resources:
   - configmaps
+  - endpoints
   - pods
   - secrets
   - serviceaccounts

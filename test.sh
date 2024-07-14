@@ -2,7 +2,7 @@
 
 set -xeo pipefail
 
-kubectl delete -f examples/bgdbops.yaml
+kubectl delete -f examples/bgdbops.yaml || true
 kubectl delete -f examples/bgshardedcluster.yaml --wait || true
 kubectl delete -f examples/bgcluster.yaml --wait || true
 sleep 5
@@ -40,7 +40,7 @@ kubectl apply -f examples/bgcluster.yaml
 
 # watch 'kubectl get bgcluster -o=json | jq ".items[].metadata.annotations"'
 
-sleep 15
+sleep 30
 kubectl exec -it bgcluster-0 -- pg_isready
 
 # kubectl apply -f examples/bgdbops.yaml
@@ -55,3 +55,7 @@ kubectl exec -it bgcluster-0 -- psql -U postgres -c "INSERT INTO test_table (nam
 kubectl exec -it bgcluster-0 -- psql -U postgres -c "INSERT INTO test_table (name, age) VALUES ('Bob', 25);"
 kubectl exec -it bgcluster-0 -- psql -U postgres -c "INSERT INTO test_table (name, age) VALUES ('Charlie', 35);"
 kubectl exec -it bgcluster-0 -- psql -U postgres -c "SELECT * FROM test_table;"
+sleep 30
+kubectl exec -it bgcluster-1 -- psql -U postgres -c "SELECT * FROM test_table;"
+
+# kubectl apply -f examples/bgdbops.yaml

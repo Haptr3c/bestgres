@@ -15,10 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-////////////////////////////////////////
-//         Run once functions         //
-////////////////////////////////////////
-
 // hackConfigs modifies the Spilo configuration for sharded clusters
 func hackConfigs(bgCluster *bestgresv1.BGCluster) {
 	filePath := "/scripts/configure_spilo.py"

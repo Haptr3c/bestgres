@@ -138,7 +138,6 @@ func getResources(podName, namespace string, c client.Client) *bestgresv1.BGClus
 	return bgCluster
 }
 
-
 // runAllPsqlCommands executes all SQL commands with error handling and retries
 func runPsqlCommands(commands []string) error {
 	maxRetries := 5

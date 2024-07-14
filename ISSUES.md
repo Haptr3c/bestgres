@@ -4,14 +4,14 @@
     - ~~This should be fixed now I think? Observe in case of continued errant behavior.~~
     - Still seeing it happen a bit, need to double check all the places where we're updating the object and make sure it's always pulling fresh context.
     `Failed to update BGCluster: Operation cannot be fulfilled on bgclusters.bestgres.io "bgshardedcluster-coordinator": the object has been modified; please apply your changes to the latest version and try again`
-2. [ ] Master/replica broken, might be due to removal of endpoints?
-    - seems networking related, can't hit the master svc from the replica with creds
-    - doesn't seem to be endpoint related added back all perms but still broken
-    - maybe [this](https://github.com/Haptr3c/bestgres/compare/29e46a0a89789ff591df3327fd3e1f37e2ff52f5...main#diff-3dc09f1f3c24c29007908270118355059cc4ae947a1c8a50ea4e0cefb8f68d76L166-R124)?
-    - check replication credentials
-    - take out BGMON_LISTEN_IP (probably not needed)
+2. [x] ~~Master/replica broken, might be due to removal of endpoints?~~
+    - ~~seems networking related, can't hit the master svc from the replica with creds~~
+    - ~~doesn't seem to be endpoint related added back all perms but still broken~~
+    - ~~maybe [this](https://github.com/Haptr3c/bestgres/compare/29e46a0a89789ff591df3327fd3e1f37e2ff52f5...main#diff-3dc09f1f3c24c29007908270118355059cc4ae947a1c8a50ea4e0cefb8f68d76L166-R124)?~~
+    - ~~check replication credentials~~
+    - ~~take out BGMON_LISTEN_IP (probably not needed)~~
 3. [x] ~~Replicas fight over the initialized: true annotation~~
-    - switched to operator handling setting "initialized" rather than controller
+    - ~~switched to operator handling setting "initialized" rather than controller~~
 4. [ ] Configmaps don't always get deleted for some reason? need to verify that they have the right ownership. Might be a race condition issue with testing script.
 5. [ ] Coordinator gets stuck with no leader configmap sometimes, need to investigate why this happens.
 6. [ ] Same as issue #1 but with the coordinator as well.

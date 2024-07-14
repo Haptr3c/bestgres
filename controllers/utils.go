@@ -2,12 +2,16 @@ package controllers
 
 import (
 	bestgresv1 "bestgres/api/v1"
+	"context"
 	"crypto/rand"
+	"log"
 	"math/big"
 	"os"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func getOperatorImage() (string) {
@@ -35,7 +39,7 @@ func generateRandomPassword(length int) (string, error) {
 
 func labelsForBGCluster(name string) map[string]string {
 	return map[string]string{
-		"application":  "bestgres",
+		"application":  "spilo",
 		"cluster-name": name,
 	}
 }
@@ -58,4 +62,12 @@ func isOwnedByBGCluster(obj metav1.Object, bgCluster *bestgresv1.BGCluster) bool
 		}
 	}
 	return false
+}
+
+func refreshContext(bgCluster *bestgresv1.BGCluster, c client.Client) *bestgresv1.BGCluster {
+	err := c.Get(context.TODO(), types.NamespacedName{Name: bgCluster.Name, Namespace: bgCluster.Namespace}, bgCluster)
+	if err != nil {
+		log.Printf("Error refreshing BGCluster: %v", err)
+	}
+	return bgCluster
 }

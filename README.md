@@ -28,13 +28,13 @@
     - [x] coordinator adds workers to citus as they report via annotations
 - [x] setup a proper logger for the controller
 - [x] get bgdbops communications working
+- [x] fix replicas
 - [x] add db restart bgdbops
 - [ ] add db restart bgshardeddbops
 - [ ] add spindown safety
   - [ ] add finalizers
   - [ ] add clean db shutdown handling
   - [ ] handle main process better (stop controller when main crashes)
-- [ ] fix replicas
 - [ ] polish user experience
   - [ ] add cr status
   - [ ] better error messages

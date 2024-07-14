@@ -25,7 +25,7 @@ type BGClusterReconciler struct {
 //+kubebuilder:rbac:groups=bestgres.io,resources=bgclusters/status,verbs=get;update;patch,namespace="{{ .Release.Namespace }}"
 //+kubebuilder:rbac:groups=bestgres.io,resources=bgclusters/finalizers,verbs=update,namespace="{{ .Release.Namespace }}"
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete,namespace="{{ .Release.Namespace }}"
-//+kubebuilder:rbac:groups=core,resources=pods;services;secrets;serviceaccounts;configmaps,verbs=get;list;watch;create;update;patch;delete,namespace="{{ .Release.Namespace }}"
+//+kubebuilder:rbac:groups=core,resources=pods;services;endpoints;secrets;serviceaccounts;configmaps,verbs=get;list;watch;create;update;patch;delete,namespace="{{ .Release.Namespace }}"
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch;create;update;patch;delete,namespace="{{ .Release.Namespace }}"
 
 func (r *BGClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -78,11 +78,14 @@ func (r *BGClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
     }
     podNames := getPodNames(podList.Items)
 
+    // TODO test this, might break stuff
+    bgCluster = refreshContext(bgCluster, r.Client)
+
     if !reflect.DeepEqual(podNames, bgCluster.Status.Nodes) {
         bgCluster.Status.Nodes = podNames
         err := r.Status().Update(ctx, bgCluster)
         if err != nil {
-            log.Error(err, "Failed to update BGCluster status")
+            log.Error(err, "Error in bgCluster.Status.Update")
             return ctrl.Result{}, err
         }
     }

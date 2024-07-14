@@ -213,7 +213,7 @@ func (r *BGClusterReconciler) createVolumeClaimTemplates(bgCluster *bestgresv1.B
 
 func (r *BGClusterReconciler) getLabelsAndAnnotations(bgCluster *bestgresv1.BGCluster) map[string]string {
 	labels := map[string]string{
-		"application":  "bestgres",
+		"application":  "spilo",
 		"cluster-name": bgCluster.Name,
 	}
 

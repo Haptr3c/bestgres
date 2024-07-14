@@ -96,6 +96,8 @@ func handleBgDbOps(bgCluster *bestgresv1.BGCluster, c client.Client) error {
     switch op {
     case "restart":
         err = handleRestart(c, bgCluster, spec)
+    case "backup":
+        err = handleBackup(c, bgCluster, spec)
     case "benchmark":
         err = handleBenchmark(c, bgCluster, spec)
     case "repack":
@@ -136,6 +138,12 @@ func handleRestart(c client.Client, bgCluster *bestgresv1.BGCluster, spec string
             return fmt.Errorf("failed to update BGDbOps: %v", err)
         }
     }
+    return nil
+}
+
+func handleBackup(c client.Client, bgCluster *bestgresv1.BGCluster, spec string) error {
+    // Placeholder function for backup operation
+    log.Printf("Handling backup operation for %s", bgCluster.Name)
     return nil
 }
 
