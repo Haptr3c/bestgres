@@ -25,6 +25,8 @@ const (
 func (r *BGDbOpsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
+	// logger.Info("Reconciling BGDbOps", "name", req.Name, "namespace", req.Namespace)
+
 	// Fetch the BGDbOps instance
 	bgDbOps := &bestgresv1.BGDbOps{}
 	err := r.Get(ctx, req.NamespacedName, bgDbOps)
@@ -34,7 +36,7 @@ func (r *BGDbOpsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Check if the BGDbOps is already completed
 	if bgDbOps.Annotations[bgDbOpsCompletedAnnotation] == "true" {
-		logger.Info("BGDbOps already completed")
+		logger.Info("BGDbOps completed")
 		return ctrl.Result{}, nil
 	}
 
@@ -54,21 +56,19 @@ func (r *BGDbOpsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		logger.Error(err, "Unable to list pods")
 		return ctrl.Result{}, err
 	}
-	logger.Info("Podlist is", "podlist", podList)
 
 	allCompleted := true
 	for _, pod := range podList.Items {
-		logger.Info("Checking pod", "pod", pod.Name)
+		// logger.Info("Checking pod", "pod", pod.Name)
 		if pod.Annotations[bgDbOpsCompletedAnnotation] != "true" {
-			logger.Info("Pod has not completed the bgdbop", "pod", pod.Name)
-			logger.Info("Pod annotations", "annotations", pod.Annotations)
+			// logger.Info("Pod has not completed the bgdbop", "pod", pod.Name)
+			// logger.Info("Pod annotations", "annotations", pod.Annotations)
 			allCompleted = false
 			break
 		}
 	}
 
 	if allCompleted {
-		logger.Info("All pods have completed the bgdbop")
 		// Remove operation annotations and set pending to false
 		delete(bgCluster.Annotations, bgDbOpsOpAnnotation)
 		delete(bgCluster.Annotations, bgDbOpsSpecAnnotation)
@@ -96,7 +96,7 @@ func (r *BGDbOpsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if bgCluster.Annotations == nil {
 		bgCluster.Annotations = make(map[string]string)
 	}
-	logger.Info("Setting annotations on BGCluster")
+	logger.Info("BGDBOps created targeting BGCluster", "bgCluster", bgCluster.Name)
 	bgCluster.Annotations[bgDbOpsPendingAnnotation] = "true"
 	bgCluster.Annotations[bgDbOpsOpAnnotation] = string(bgDbOps.Spec.Op)
 	bgCluster.Annotations[bgDbOpsInProgressAnnotation] = bgDbOps.Name
@@ -110,7 +110,6 @@ func (r *BGDbOpsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	bgCluster.Annotations[bgDbOpsSpecAnnotation] = string(specJSON)
 
 	// Update BGCluster
-	logger.Info("Updating BGCluster annotations")
 	if err := r.Update(ctx, bgCluster); err != nil {
 		logger.Error(err, "Unable to update BGCluster annotations")
 		return ctrl.Result{}, err
