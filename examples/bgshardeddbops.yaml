@@ -1,0 +1,10 @@
+apiVersion: bestgres.io/v1
+kind: BGShardedDbOps
+metadata:
+  name: bgshardeddbops
+  namespace: default
+spec:
+  bgShardedCluster: bgshardedcluster     # Name of the BGShardedCluster resource
+  bgDbOpsSpec:                           # Specification for the operation
+    op: restart                          # Operation to perform
+    maxRetries: 1                        # Maximum number of retries

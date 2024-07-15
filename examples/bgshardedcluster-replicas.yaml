@@ -1,0 +1,21 @@
+---
+apiVersion: bestgres.io/v1
+kind: BGShardedCluster
+metadata:
+  name: bgshardedcluster-repl
+spec:
+  shards: 1
+  coordinator:
+    instances: 2
+    volumeSpec:
+      persistentVolumeSize: 1Gi
+      storageClass: hostpath
+    image:
+      tag: spilo:16-citus
+  workers:
+    instances: 2
+    volumeSpec:
+      persistentVolumeSize: 1Gi
+      storageClass: hostpath
+    image:
+      tag: spilo:16-citus

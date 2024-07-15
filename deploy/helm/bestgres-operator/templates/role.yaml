@@ -96,6 +96,32 @@ rules:
   - patch
   - update
 - apiGroups:
+  - bestgres.io
+  resources:
+  - bgshardeddbops
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - bestgres.io
+  resources:
+  - bgshardeddbops/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - bestgres.io
+  resources:
+  - bgshardeddbops/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - ""
   resources:
   - configmaps

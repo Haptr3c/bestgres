@@ -35,3 +35,4 @@ sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller).processNext
 sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller).Start.func2.2
     /go/pkg/mod/sigs.k8s.io/controller-runtime@v0.18.4/pkg/internal/controller/controller.go:222
     ```
+7. [ ] Replicas for shardedclusters aren't working, probalby need to make specific bootstrap codepaths for that situation, right now they're just trying to do the default for sharded coord/worker bootstrapping.
