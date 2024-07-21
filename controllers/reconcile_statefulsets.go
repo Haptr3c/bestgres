@@ -80,12 +80,7 @@ func (r *BGClusterReconciler) reconcileBGClusterInitialization(ctx context.Conte
 			}
 			log.Info("Updated BGCluster with all-pods-initialized annotation", "BGCluster.Name", bgCluster.Name)
 		}
-	} else {
-		log.Info("Not all pods are initialized or replica count mismatch", 
-			"BGCluster.Name", bgCluster.Name, 
-			"DesiredReplicas", desiredReplicas, 
-			"InitializedPods", initializedPods, 
-			"TotalPods", len(podList.Items))
+	// if not all pods are initalized, no-op
 	}
 
 	return nil
@@ -103,6 +98,7 @@ func (r *BGClusterReconciler) createStatefulSetObject(bgCluster *bestgresv1.BGCl
 			Annotations: labels,
 		},
 		Spec: appsv1.StatefulSetSpec{
+			MinReadySeconds: 10,
 			Replicas:    &replicas,
 			ServiceName: bgCluster.Name,
 			Selector: &metav1.LabelSelector{

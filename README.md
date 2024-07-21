@@ -30,7 +30,7 @@
 - [x] get bgdbops communications working
 - [x] fix replicas
 - [x] add db restart bgdbops
-- [ ] add db restart bgshardeddbops
+- [x] add db restart bgshardeddbops
 - [ ] add spindown safety
   - [ ] add finalizers
   - [ ] add clean db shutdown handling

@@ -127,13 +127,23 @@ func handleRestart(c client.Client, bgCluster *bestgresv1.BGCluster, spec string
         // we have to get the name of the bgdbop object from the bgcluster object's in-progress annotation
         bgDbOpsName := bgCluster.Annotations[bgDbOpsInProgressAnnotation]
         bgDbOps := &bestgresv1.BGDbOps{}
+        // get the BGDbOps object
         err := c.Get(context.TODO(), types.NamespacedName{Name: bgDbOpsName, Namespace: namespace}, bgDbOps)
         if err != nil {
             return fmt.Errorf("failed to get BGDbOps: %v", err)
         }
         // create an annotation on the bgdbop to indicate that the operation is complete
         podCompletedAnnotation := string("bgcluster.bestgres.io/" + podName )
+        
+        // Initialize the Annotations map if it's nil
+        if bgDbOps.Annotations == nil {
+            bgDbOps.Annotations = make(map[string]string)
+        }
+        
+        // Set the annotation to true
         bgDbOps.Annotations[podCompletedAnnotation] = "true"
+
+        // Update the BGDbOps object
         if err := c.Update(context.TODO(), bgDbOps); err != nil {
             return fmt.Errorf("failed to update BGDbOps: %v", err)
         }

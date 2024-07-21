@@ -16,8 +16,8 @@ kubectl delete pvc controller-bgcluster-0 || true
 kubectl delete pvc controller-bgcluster-1 || true
 kubectl delete pvc pgdata-bgcluster-0 || true
 kubectl delete pvc pgdata-bgcluster-1 || true
-kubectl delete cm bgcluster-0-leader || true
-kubectl delete cm bgcluster-1-leader || true
+# kubectl delete cm bgcluster-0-leader || true
+# kubectl delete cm bgcluster-1-leader || true
 
 # delete bgshardedcluster stuff
 kubectl delete pvc pgdata-bgshardedcluster-coordinator-0 || true
@@ -30,11 +30,11 @@ kubectl delete pvc controller-bgshardedcluster-coordinator-1 || true
 kubectl delete pvc controller-bgshardedcluster-worker-0-0 || true
 kubectl delete pvc controller-bgshardedcluster-worker-0-1 || true
 kubectl delete pvc controller-bgshardedcluster-worker-1-0 || true
-kubectl delete cm bgshardedcluster-worker-0-leader || true
-kubectl delete cm bgshardedcluster-worker-0-config || true
-kubectl delete cm bgshardedcluster-worker-1-leader || true
-kubectl delete cm bgshardedcluster-worker-1-config || true
-kubectl delete cm bgshardedcluster-coordinator-leader || true
+# kubectl delete cm bgshardedcluster-worker-0-leader || true
+# kubectl delete cm bgshardedcluster-worker-0-config || true
+# kubectl delete cm bgshardedcluster-worker-1-leader || true
+# kubectl delete cm bgshardedcluster-worker-1-config || true
+# kubectl delete cm bgshardedcluster-coordinator-leader || true
 kubectl delete pvc controller-bgshardedcluster-repl-coordinator-0 || true
 kubectl delete pvc controller-bgshardedcluster-repl-coordinator-1 || true
 kubectl delete pvc controller-bgshardedcluster-repl-worker-0-0 || true
@@ -57,8 +57,8 @@ kubectl delete crd bgshardeddbops.bestgres.io || true
 make
 
 helm upgrade --install bestgres-operator deploy/helm/bestgres-operator/.
-# kubectl apply -f examples/bgcluster.yaml
 sleep 2
+# kubectl apply -f examples/bgcluster.yaml
 kubectl apply -f examples/bgshardedcluster.yaml
 
 # watch 'kubectl get bgcluster -o=json | jq ".items[].metadata.annotations"'

@@ -86,6 +86,7 @@ func updateAnnotation(c client.Client, podName, namespace, key, value string) er
         return fmt.Errorf("failed to get pod: %v", err)
     }
 
+    // Initialize the Annotations map if it's nil
     if pod.Annotations == nil {
         pod.Annotations = make(map[string]string)
     }
@@ -104,10 +105,12 @@ func deleteAnnotation(c client.Client, podName, namespace, key string) error {
 		return fmt.Errorf("failed to get pod: %v", err)
 	}
 
-	delete(pod.Annotations, key)
+	if pod.Annotations != nil {
+		delete(pod.Annotations, key)
 
-	if err := c.Update(context.TODO(), pod); err != nil {
-		return fmt.Errorf("failed to update pod: %v", err)
+		if err := c.Update(context.TODO(), pod); err != nil {
+			return fmt.Errorf("failed to update pod: %v", err)
+		}
 	}
 	return nil
 }
