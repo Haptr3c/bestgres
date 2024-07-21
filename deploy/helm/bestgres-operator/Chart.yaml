@@ -2,4 +2,4 @@ apiVersion: v2
 name: bestgres-operator
 description: A Helm chart for the best postgres Kubernetes Operator
 version: 0.0.1
-appVersion: dev-4aef94d
+appVersion: dev-b8bf209

@@ -53,11 +53,8 @@ func getPodNames(pods []corev1.Pod) []string {
 }
 
 func isOwnedByBGCluster(obj metav1.Object, bgCluster *bestgresv1.BGCluster) bool {
-	for _, owner := range obj.GetOwnerReferences() {
-		if owner.APIVersion == bestgresv1.GroupVersion.String() &&
-			owner.Kind == "BGCluster" &&
-			owner.Name == bgCluster.Name &&
-			owner.UID == bgCluster.UID {
+	for _, ref := range obj.GetOwnerReferences() {
+		if ref.APIVersion == bgCluster.APIVersion && ref.Kind == bgCluster.Kind && ref.Name == bgCluster.Name {
 			return true
 		}
 	}

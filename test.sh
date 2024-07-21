@@ -3,6 +3,7 @@
 set -xeo pipefail
 
 kubectl delete -f examples/bgdbops.yaml || true
+kubectl delete -f examples/bgshardeddbops.yaml || true
 kubectl delete -f examples/bgshardedcluster.yaml --wait || true
 kubectl delete -f examples/bgshardedcluster-replicas.yaml --wait || true
 kubectl delete -f examples/bgcluster.yaml --wait || true
@@ -29,7 +30,9 @@ kubectl delete pvc controller-bgshardedcluster-worker-0-0 || true
 kubectl delete pvc controller-bgshardedcluster-worker-0-1 || true
 kubectl delete pvc controller-bgshardedcluster-worker-1-0 || true
 kubectl delete cm bgshardedcluster-worker-0-leader || true
+kubectl delete cm bgshardedcluster-worker-0-config || true
 kubectl delete cm bgshardedcluster-worker-1-leader || true
+kubectl delete cm bgshardedcluster-worker-1-config || true
 kubectl delete cm bgshardedcluster-coordinator-leader || true
 kubectl delete pvc controller-bgshardedcluster-repl-coordinator-0 || true
 kubectl delete pvc controller-bgshardedcluster-repl-coordinator-1 || true

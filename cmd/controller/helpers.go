@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -78,6 +79,7 @@ func deletePod(c client.Client, podName string, namespace string) {
 }
 
 func updateAnnotation(c client.Client, podName, namespace, key, value string) error {
+	fmt.Printf("Updating annotation %s with value, %s", key, value)
     pod := &corev1.Pod{}
     err := c.Get(context.TODO(), types.NamespacedName{Name: podName, Namespace: namespace}, pod)
     if err != nil {
@@ -168,22 +170,46 @@ func runPsqlCommand(sqlCommand string, maxRetries int, retryInterval time.Durati
 			return nil
 		}
 
-		exitErr, ok := err.(*exec.ExitError)
+		_, ok := err.(*exec.ExitError)
 		if !ok {
 			// This is not an ExitError, so it's likely a more severe issue
 			return fmt.Errorf("failed to execute psql command: %v", err)
 		}
 
-		if exitErr.ExitCode() == 1 {
-			// Exit code 1 usually means a SQL error, which we don't want to retry
-			return fmt.Errorf("SQL error: %s", stderr.String())
+		// Log the error, including stdout and stderr
+		// log.Printf("Command failed (attempt %d/%d): %s\nStdout: %s\nStderr: %s\n",
+			// attempt+1, maxRetries, err, stdout.String(), stderr.String())
+
+		// Check if the error is retryable
+		if isRetryableError(stderr.String()) {
+			log.Printf("Retryable error detected. Retrying in %v...", retryInterval)
+			time.Sleep(retryInterval)
+			continue
 		}
 
-		log.Printf("Command failed (attempt %d/%d): %s\nRetrying in %v...", attempt+1, maxRetries, stderr.String(), retryInterval)
-		time.Sleep(retryInterval)
+		// If it's not a retryable error, return immediately
+		return fmt.Errorf("SQL error: %s", stderr.String())
 	}
 
 	return fmt.Errorf("failed to execute psql command after %d attempts: %s", maxRetries, stderr.String())
+}
+
+// isRetryableError checks if the error message indicates a retryable error
+func isRetryableError(errMsg string) bool {
+	retryableErrors := []string{
+		"connection refused",
+		"connection marked as essential",
+		"connection timed out",
+		"temporary failure",
+		"No function matches the given name and argument types",
+	}
+
+	for _, retryableErr := range retryableErrors {
+		if strings.Contains(strings.ToLower(errMsg), strings.ToLower(retryableErr)) {
+			return true
+		}
+	}
+	return false
 }
 
 // runCommand executes a single linux command with retries

@@ -97,124 +97,150 @@ func bootstrapStandaloneBGCluster(bgCluster *bestgresv1.BGCluster, c client.Clie
 	// If this bgcluster has already been initialized, we assume this pod is coming back up
 	// after a restart. In that case, we don't need to run the bootstrap commands again.
 	if checkAnnotation(bgCluster, bgClusterInitializedAnnotation) == "true" {
+		log.Println("BGCluster already initialized")
 		// If there is a pending operation to restart the cluster, we need to mark it complete
 		if checkAnnotation(bgCluster, bgDbOpsPendingAnnotation) == "true" && checkAnnotation(bgCluster, bgDbOpsOpAnnotation) == "restart" {
 			log.Println("Marking restart operation as complete")
 			updateAnnotation(c, podName, namespace, bgDbOpsCompletedAnnotation, "true")
 		}
 	} else {
-	userBootstrap := bgCluster.Spec.BootstrapSQL
-	time.Sleep(5 * time.Second)
-	// TODO remove the sleep after fixing db readiness check
-	// wait for postgres to actually be ready
-	log.Println("Running BGCluster bootstrap")
-	if err := runPsqlCommands(userBootstrap); err != nil {
-		log.Printf("Failed to run bootstrap SQL commands: %v", err)
-		// may want to exit here if the bootstrap commands are critical
-		// os.Exit(1)
-	}
+		userBootstrap := bgCluster.Spec.BootstrapSQL
+		time.Sleep(5 * time.Second)
+		// TODO remove the sleep after fixing db readiness check
+		// wait for postgres to actually be ready
+		log.Println("Running BGCluster bootstrap")
+		if err := runPsqlCommands(userBootstrap); err != nil {
+			log.Printf("Failed to run bootstrap SQL commands: %v", err)
+			// may want to exit here if the bootstrap commands are critical
+			// os.Exit(1)
+		}
 
-	if err := updateAnnotation(c, podName, namespace, bgClusterInitializedAnnotation, "true"); err != nil {
-		log.Printf("Bootstrapping complete but annotation not updated for Pod: %v", err)
-	}
+		if err := updateAnnotation(c, podName, namespace, bgClusterInitializedAnnotation, "true"); err != nil {
+			log.Printf("Bootstrapping complete but annotation not updated for Pod: %v", err)
+		}
 	}
 }
 
 func bootstrapWorkerNode(bgCluster *bestgresv1.BGCluster, c client.Client) {
-	var systemCommands []string
-	userCommands := bgCluster.Spec.BootstrapSQL
-	
-	time.Sleep(5 * time.Second)
-	// TODO remove the sleep after fixing db readiness check
-	// wait for postgres to actually be ready
-	log.Println("Running worker node bootstrap")
+	// If this bgcluster has already been initialized, we assume this pod is coming back up
+	// after a restart. In that case, we don't need to run the bootstrap commands again.
+	if checkAnnotation(bgCluster, bgClusterInitializedAnnotation) == "true" {
+		log.Println("Worker node already initialized")
+		// If there is a pending operation to restart the cluster, we need to mark it complete
+		if checkAnnotation(bgCluster, bgDbOpsPendingAnnotation) == "true" && checkAnnotation(bgCluster, bgDbOpsOpAnnotation) == "restart" {
+			log.Println("Marking restart operation as complete")
+			updateAnnotation(c, podName, namespace, bgDbOpsCompletedAnnotation, "true")
+		}
+	} else {
+		var systemCommands []string
+		userCommands := bgCluster.Spec.BootstrapSQL
+		
+		time.Sleep(5 * time.Second)
+		// TODO remove the sleep after fixing db readiness check
+		// wait for postgres to actually be ready
+		log.Println("Running worker node bootstrap")
 
-	// Add the Citus extension
-	systemCommands = append(systemCommands, "CREATE EXTENSION IF NOT EXISTS citus;")
-	// Add any user-defined commands
+		// Add the Citus extension
+		systemCommands = append(systemCommands, "CREATE EXTENSION IF NOT EXISTS citus;")
+		// Add any user-defined commands
 
-	// Run the SQL system commands
-	if err := runPsqlCommands(systemCommands); err != nil {
-		log.Printf("Failed to run system bootstrap SQL commands: %v", err)
-		os.Exit(1)
+		// Run the SQL system commands
+		if err := runPsqlCommands(systemCommands); err != nil {
+			log.Printf("Failed to run system bootstrap SQL commands: %v", err)
+			os.Exit(1)
+		}
+		// Run the SQL user commands
+		if err := runPsqlCommands(userCommands); err != nil {
+			log.Printf("Failed to run user bootstrap SQL commands: %v", err)
+		}
+
+		if err := updateAnnotation(c, podName, namespace, bgClusterInitializedAnnotation, "true"); err != nil {
+			log.Printf("Bootstrapping complete but annotation not updated for Pod: %v", err)
+		}
 	}
-	// Run the SQL user commands
-	if err := runPsqlCommands(userCommands); err != nil {
-		log.Printf("Failed to run user bootstrap SQL commands: %v", err)
-	}
-
-    if err := updateAnnotation(c, podName, namespace, bgClusterInitializedAnnotation, "true"); err != nil {
-        log.Printf("Bootstrapping complete but annotation not updated for Pod: %v", err)
-    }
 }
 
 func bootstrapCoordinatorNode(bgCluster *bestgresv1.BGCluster, c client.Client) {
-	var systemCommands []string
-	userCommands := bgCluster.Spec.BootstrapSQL
-	// TODO remove the sleep after fixing db readiness check
-	// wait for postgres to actually be ready (patroni readiness check apparently is not good enough)
-	time.Sleep(5 * time.Second)
-	log.Println("Running coordinator node bootstrap")
+	// If this bgcluster has already been initialized, we assume this pod is coming back up
+	// after a restart. In that case, we don't need to run the bootstrap commands again.
+	if checkAnnotation(bgCluster, bgClusterInitializedAnnotation) == "true" {
+		log.Println("Coordinator node already initialized")
+		// If there is a pending operation to restart the cluster, we need to mark it complete
+		if checkAnnotation(bgCluster, bgDbOpsPendingAnnotation) == "true" && checkAnnotation(bgCluster, bgDbOpsOpAnnotation) == "restart" {
+			log.Println("Marking restart operation as complete")
+			updateAnnotation(c, podName, namespace, bgDbOpsCompletedAnnotation, "true")
+		}
+	} else {
+		var systemCommands []string
+		userCommands := bgCluster.Spec.BootstrapSQL
+		// TODO remove the sleep after fixing db readiness check
+		// wait for postgres to actually be ready (patroni readiness check apparently is not good enough)
+		time.Sleep(5 * time.Second)
+		log.Println("Running coordinator node bootstrap")
 
-	// Add the Citus extension
-	systemCommands = append(systemCommands, "CREATE EXTENSION IF NOT EXISTS citus;")
-	// Set the coordinator host
-	coordinatorHost := bgCluster.Name + "-coordinator"
-	systemCommands = append(systemCommands, fmt.Sprintf("SELECT citus_set_coordinator_host('%s', 5432);", coordinatorHost))
-	
-	// Run the SQL system commands
-	if err := runPsqlCommands(systemCommands); err != nil {
-		log.Printf("Failed to run system bootstrap SQL commands: %v", err)
-		os.Exit(1)
-	}
-	
-	// TODO fix the logic here, right now it waits for workers in sequence
-	// it should loop over the workers and add them as they become ready
-	// Wait for workers to init and add them to the coordinator
-	workerListJSON, exists := bgCluster.Annotations[bgShardedClusterWorkersAnnotation]
-	if !exists {
-		log.Printf("annotation %s does not exist", bgShardedClusterWorkersAnnotation)
-	}
-	// Unmarshal the JSON array into a slice of strings
-	var workerList []string
-	if err := json.Unmarshal([]byte(workerListJSON), &workerList); err != nil {
-		log.Printf("failed to unmarshal worker list from annotation: %v", err)
-	}
+		// Add the Citus extension
+		systemCommands = append(systemCommands, "CREATE EXTENSION IF NOT EXISTS citus;")
+		// Set the coordinator host
+		coordinatorHost := bgCluster.Name + "-coordinator"
+		systemCommands = append(systemCommands, fmt.Sprintf("SELECT citus_set_coordinator_host('%s', 5432);", coordinatorHost))
+		
+		// Run the SQL system commands
+		if err := runPsqlCommands(systemCommands); err != nil {
+			log.Printf("Failed to run system bootstrap SQL commands: %v", err)
+			os.Exit(1)
+		}
+		
+		// TODO fix the logic here, right now it waits for workers in sequence
+		// it should loop over the workers and add them as they become ready
+		// Wait for workers to init and add them to the coordinator
+		workerListJSON, exists := bgCluster.Annotations[bgShardedClusterWorkersAnnotation]
+		if !exists {
+			log.Printf("annotation %s does not exist", bgShardedClusterWorkersAnnotation)
+		}
+		// Unmarshal the JSON array into a slice of strings
+		var workerList []string
+		if err := json.Unmarshal([]byte(workerListJSON), &workerList); err != nil {
+			log.Printf("failed to unmarshal worker list from annotation: %v", err)
+		}
 
-	for _, worker := range workerList {
-		log.Printf("List of workers:\n%s", bgCluster.Annotations[bgShardedClusterWorkersAnnotation])
-		log.Printf("Adding worker node %s to coordinator", worker)
-	
-		// calculate the correct annotation to wait for
-		annotation := fmt.Sprintf("bgshardedcluster.bestgres.io/%s-initialized", worker)
-		// wait for that annotation to bet set to true
-		waitForInitilizatedAnnotation(bgCluster, c, 2 * time.Minute, annotation)
-		// calculate the sql command to add the worker to the coordinator
-		command := fmt.Sprintf("SELECT * FROM citus_add_node('%s', 5432);", worker)
-		// run the command
-		if err := runPsqlCommand(command, 5, 5 * time.Second); err != nil {
-			log.Printf("Failed to add worker node %s to coordinator: %v", worker, err)
+		for _, worker := range workerList {
+			log.Printf("List of workers:\n%s", bgCluster.Annotations[bgShardedClusterWorkersAnnotation])
+			log.Printf("Adding worker node %s to coordinator", worker)
+		
+			// calculate the correct annotation to wait for
+			annotation := fmt.Sprintf("bgshardedcluster.bestgres.io/%s-initialized", worker)
+			// wait for that annotation to bet set to true
+			waitForInitilizatedAnnotation(bgCluster, c, 2 * time.Minute, annotation)
+			// calculate the sql command to add the worker to the coordinator
+			command := fmt.Sprintf("SELECT * FROM citus_add_node('%s', 5432);", worker)
+			// run the command
+			if err := runPsqlCommand(command, 5, 5 * time.Second); err != nil {
+				log.Printf("Failed to add worker node %s to coordinator: %v", worker, err)
+			}
+		}
+		
+		// Run the SQL user commands
+		if err := runPsqlCommands(userCommands); err != nil {
+			log.Printf("Failed to run user bootstrap SQL commands: %v", err)
+		}
+		if err := updateAnnotation(c, podName, namespace, bgClusterInitializedAnnotation, "true"); err != nil {
+			log.Printf("Bootstrapping complete but annotation not updated for Pod: %v", err)
 		}
 	}
-	
-	// Run the SQL user commands
-	if err := runPsqlCommands(userCommands); err != nil {
-		log.Printf("Failed to run user bootstrap SQL commands: %v", err)
-	}
-    if err := updateAnnotation(c, podName, namespace, bgClusterInitializedAnnotation, "true"); err != nil {
-        log.Printf("Bootstrapping complete but annotation not updated for Pod: %v", err)
-    }
 }
 
 func isPartOfShardedCluster(bgCluster *bestgresv1.BGCluster) bool {
 	_, exists := bgCluster.Labels[bgClusterPartOfLabel]
+	log.Printf("isPartOfShardedCluster: %v", exists)
 	return exists
 }
 
 func isCoordinatorNode(bgCluster *bestgresv1.BGCluster) bool {
+	log.Printf("isCoordinatorNode: %v", bgCluster.Labels[bgClusterRoleLabel] == "coordinator")
 	return bgCluster.Labels[bgClusterRoleLabel] == "coordinator"
 }
 
 func isWorkerNode(bgCluster *bestgresv1.BGCluster) bool {
+	log.Printf("isWorkerNode: %v", bgCluster.Labels[bgClusterRoleLabel] == "worker")
 	return bgCluster.Labels[bgClusterRoleLabel] == "worker"
 }
