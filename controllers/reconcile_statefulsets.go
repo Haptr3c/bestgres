@@ -41,8 +41,11 @@ func (r *BGClusterReconciler) reconcileStatefulSet(ctx context.Context, bgCluste
 	return r.reconcileBGClusterInitialization(ctx, bgCluster, foundSts)
 }
 
+// reconcileBGClusterInitialization reconciles the initialization state of a BGCluster
 func (r *BGClusterReconciler) reconcileBGClusterInitialization(ctx context.Context, bgCluster *bestgresv1.BGCluster, sts *appsv1.StatefulSet) error {
 	log := ctrl.LoggerFrom(ctx)
+
+	// log.Info("Starting reconciliation of BGCluster initialization", "BGCluster.Name", bgCluster.Name, "StatefulSet.Name", sts.Name)
 
 	// List all pods belonging to this StatefulSet
 	podList := &corev1.PodList{}
@@ -51,30 +54,45 @@ func (r *BGClusterReconciler) reconcileBGClusterInitialization(ctx context.Conte
 		client.MatchingLabels(sts.Spec.Selector.MatchLabels),
 	}
 	if err := r.List(ctx, podList, listOpts...); err != nil {
+		log.Error(err, "Failed to list pods", "StatefulSet.Namespace", sts.Namespace, "StatefulSet.Labels", sts.Spec.Selector.MatchLabels)
 		return fmt.Errorf("failed to list pods: %w", err)
 	}
+
+	// log.Info("Listed pods for StatefulSet", "StatefulSet.Name", sts.Name, "PodCount", len(podList.Items))
 
 	// Check if all pods are initialized
 	allInitialized := true
 	for _, pod := range podList.Items {
-		if pod.Annotations[initializedAnnotation] != "true" {
+		// podName := pod.Name
+		podInitialized := pod.Annotations[initializedAnnotation] == "true"
+		// log.Info("Checking pod initialization", "Pod.Name", podName, "Initialized", podInitialized)
+		if !podInitialized {
 			allInitialized = false
 			break
 		}
 	}
 
 	// Update BGCluster annotation if all pods are initialized
-	if allInitialized && bgCluster.Annotations[initializedAnnotation] != "true" {
-		if bgCluster.Annotations == nil {
-			bgCluster.Annotations = make(map[string]string)
+	if allInitialized {
+		// log.Info("All pods are initialized", "BGCluster.Name", bgCluster.Name)
+		if bgCluster.Annotations[initializedAnnotation] != "true" {
+			if bgCluster.Annotations == nil {
+				bgCluster.Annotations = make(map[string]string)
+			}
+			bgCluster.Annotations[initializedAnnotation] = "true"
+			if err := r.Update(ctx, bgCluster); err != nil {
+				log.Error(err, "Failed to update BGCluster annotation", "BGCluster.Name", bgCluster.Name)
+				return fmt.Errorf("failed to update BGCluster annotation: %w", err)
+			}
+			// log.Info("Updated BGCluster with all-pods-initialized annotation", "BGCluster.Name", bgCluster.Name)
+		} else {
+			// log.Info("BGCluster already marked as initialized", "BGCluster.Name", bgCluster.Name)
 		}
-		bgCluster.Annotations[initializedAnnotation] = "true"
-		if err := r.Update(ctx, bgCluster); err != nil {
-			return fmt.Errorf("failed to update BGCluster annotation: %w", err)
-		}
-		log.Info("Updated BGCluster with all-pods-initialized annotation", "BGCluster.Name", bgCluster.Name)
+	} else {
+		// log.Info("Not all pods are initialized", "BGCluster.Name", bgCluster.Name)
 	}
 
+	// log.Info("Finished reconciliation of BGCluster initialization", "BGCluster.Name", bgCluster.Name)
 	return nil
 }
 
