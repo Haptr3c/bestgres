@@ -45,8 +45,6 @@ func (r *BGClusterReconciler) reconcileStatefulSet(ctx context.Context, bgCluste
 func (r *BGClusterReconciler) reconcileBGClusterInitialization(ctx context.Context, bgCluster *bestgresv1.BGCluster, sts *appsv1.StatefulSet) error {
 	log := ctrl.LoggerFrom(ctx)
 
-	// log.Info("Starting reconciliation of BGCluster initialization", "BGCluster.Name", bgCluster.Name, "StatefulSet.Name", sts.Name)
-
 	// List all pods belonging to this StatefulSet
 	podList := &corev1.PodList{}
 	listOpts := []client.ListOption{
@@ -58,41 +56,38 @@ func (r *BGClusterReconciler) reconcileBGClusterInitialization(ctx context.Conte
 		return fmt.Errorf("failed to list pods: %w", err)
 	}
 
-	// log.Info("Listed pods for StatefulSet", "StatefulSet.Name", sts.Name, "PodCount", len(podList.Items))
+	desiredReplicas := int(*sts.Spec.Replicas)
+	initializedPods := 0
 
-	// Check if all pods are initialized
-	allInitialized := true
 	for _, pod := range podList.Items {
-		// podName := pod.Name
-		podInitialized := pod.Annotations[initializedAnnotation] == "true"
-		// log.Info("Checking pod initialization", "Pod.Name", podName, "Initialized", podInitialized)
-		if !podInitialized {
-			allInitialized = false
-			break
+		if pod.Annotations[initializedAnnotation] == "true" {
+			initializedPods++
 		}
 	}
 
-	// Update BGCluster annotation if all pods are initialized
+	allInitialized := initializedPods == desiredReplicas && initializedPods == len(podList.Items)
+
+	// Update BGCluster annotation if all pods are initialized and the count matches desired replicas
 	if allInitialized {
-		// log.Info("All pods are initialized", "BGCluster.Name", bgCluster.Name)
+		if bgCluster.Annotations == nil {
+			bgCluster.Annotations = make(map[string]string)
+		}
 		if bgCluster.Annotations[initializedAnnotation] != "true" {
-			if bgCluster.Annotations == nil {
-				bgCluster.Annotations = make(map[string]string)
-			}
 			bgCluster.Annotations[initializedAnnotation] = "true"
 			if err := r.Update(ctx, bgCluster); err != nil {
 				log.Error(err, "Failed to update BGCluster annotation", "BGCluster.Name", bgCluster.Name)
 				return fmt.Errorf("failed to update BGCluster annotation: %w", err)
 			}
-			// log.Info("Updated BGCluster with all-pods-initialized annotation", "BGCluster.Name", bgCluster.Name)
-		} else {
-			// log.Info("BGCluster already marked as initialized", "BGCluster.Name", bgCluster.Name)
+			log.Info("Updated BGCluster with all-pods-initialized annotation", "BGCluster.Name", bgCluster.Name)
 		}
 	} else {
-		// log.Info("Not all pods are initialized", "BGCluster.Name", bgCluster.Name)
+		log.Info("Not all pods are initialized or replica count mismatch", 
+			"BGCluster.Name", bgCluster.Name, 
+			"DesiredReplicas", desiredReplicas, 
+			"InitializedPods", initializedPods, 
+			"TotalPods", len(podList.Items))
 	}
 
-	// log.Info("Finished reconciliation of BGCluster initialization", "BGCluster.Name", bgCluster.Name)
 	return nil
 }
 
@@ -152,7 +147,7 @@ func (r *BGClusterReconciler) createInitContainer(bgCluster *bestgresv1.BGCluste
 		Name:            bgCluster.Name + "-init",
 		Image:           getOperatorImage(),
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Ports:           []corev1.ContainerPort{{ContainerPort: 8008, Protocol: corev1.ProtocolTCP}},
+		// Ports:           []corev1.ContainerPort{{ContainerPort: 8008, Protocol: corev1.ProtocolTCP}},
 		VolumeMounts:    []corev1.VolumeMount{{Name: "controller", MountPath: "/app"}},
 		Env:             []corev1.EnvVar{{Name: "MODE", Value: "init"}},
 	}

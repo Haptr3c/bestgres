@@ -124,11 +124,18 @@ func (r *BGShardedClusterReconciler) updateWorkerListAnnotation(ctx context.Cont
 	return r.Update(ctx, coordinator)
 }
 
+
+// updateCoordinatorAnnotations updates the coordinator annotations based on the worker initialization status
 func (r *BGShardedClusterReconciler) updateCoordinatorAnnotations(ctx context.Context, bgShardedCluster *bestgresv1.BGShardedCluster) error {
+	log := ctrl.LoggerFrom(ctx)
+
 	coordinatorName := fmt.Sprintf("%s-coordinator", bgShardedCluster.Name)
+	log.Info("Fetching coordinator BGCluster", "Coordinator.Name", coordinatorName, "Namespace", bgShardedCluster.Namespace)
+	
 	coordinator := &bestgresv1.BGCluster{}
 	err := r.Get(ctx, types.NamespacedName{Name: coordinatorName, Namespace: bgShardedCluster.Namespace}, coordinator)
 	if err != nil {
+		log.Error(err, "Failed to get coordinator BGCluster", "Coordinator.Name", coordinatorName)
 		return err
 	}
 
@@ -137,25 +144,45 @@ func (r *BGShardedClusterReconciler) updateCoordinatorAnnotations(ctx context.Co
 		coordinator.Annotations = make(map[string]string)
 	}
 
+	log.Info("Starting to process worker nodes", "TotalShards", bgShardedCluster.Spec.Shards)
+
 	for i := 0; i < int(bgShardedCluster.Spec.Shards); i++ {
 		workerName := fmt.Sprintf("%s-worker-%d", bgShardedCluster.Name, i)
+		log.Info("Fetching worker BGCluster", "Worker.Name", workerName, "Namespace", bgShardedCluster.Namespace)
+		
 		worker := &bestgresv1.BGCluster{}
 		err := r.Get(ctx, types.NamespacedName{Name: workerName, Namespace: bgShardedCluster.Namespace}, worker)
 		if err != nil {
+			log.Error(err, "Failed to get worker BGCluster", "Worker.Name", workerName)
 			return err
 		}
 
-		if initStatus, exists := worker.Annotations[initializedAnnotation]; exists {
+		initStatus, exists := worker.Annotations[initializedAnnotation]
+		log.Info("Checking worker initialization status", "Worker.Name", workerName, "Initialized", exists, "Status", initStatus)
+		
+		if exists {
 			coordinatorAnnotationKey := fmt.Sprintf("bgshardedcluster.bestgres.io/%s-initialized", workerName)
 			if coordinator.Annotations[coordinatorAnnotationKey] != initStatus {
+				log.Info("Updating coordinator annotation", "AnnotationKey", coordinatorAnnotationKey, "InitStatus", initStatus)
 				coordinator.Annotations[coordinatorAnnotationKey] = initStatus
 				updated = true
+			} else {
+				log.Info("Coordinator annotation already up-to-date", "AnnotationKey", coordinatorAnnotationKey, "InitStatus", initStatus)
 			}
+		} else {
+			log.Info("Worker does not have the initialized annotation", "Worker.Name", workerName)
 		}
 	}
 
 	if updated {
-		return r.Update(ctx, coordinator)
+		log.Info("Updating coordinator with new annotations", "Coordinator.Name", coordinatorName)
+		if err := r.Update(ctx, coordinator); err != nil {
+			log.Error(err, "Failed to update coordinator BGCluster", "Coordinator.Name", coordinatorName)
+			return err
+		}
+		log.Info("Coordinator BGCluster updated successfully", "Coordinator.Name", coordinatorName)
+	} else {
+		log.Info("No updates to coordinator annotations needed", "Coordinator.Name", coordinatorName)
 	}
 
 	return nil

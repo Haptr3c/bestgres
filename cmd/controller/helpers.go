@@ -79,7 +79,7 @@ func deletePod(c client.Client, podName string, namespace string) {
 }
 
 func updateAnnotation(c client.Client, podName, namespace, key, value string) error {
-	fmt.Printf("Updating annotation %s with value, %s", key, value)
+	log.Printf("Updating annotation %s with value, %s", key, value)
     pod := &corev1.Pod{}
     err := c.Get(context.TODO(), types.NamespacedName{Name: podName, Namespace: namespace}, pod)
     if err != nil {
