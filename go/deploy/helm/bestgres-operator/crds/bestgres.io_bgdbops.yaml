@@ -1,0 +1,140 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.15.0
+  name: bgdbops.bestgres.io
+spec:
+  group: bestgres.io
+  names:
+    kind: BGDbOps
+    listKind: BGDbOpsList
+    plural: bgdbops
+    singular: bgdbops
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: BGDbOps is the Schema for the bgdbops API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: BGDbOpsSpec defines the desired state of BGDbOps
+            properties:
+              benchmark:
+                description: Benchmark operation details
+                properties:
+                  connectionType:
+                    type: string
+                  pgbench:
+                    description: PgBenchSpec defines the details for a pgbench benchmark
+                    properties:
+                      concurrentClients:
+                        minimum: 1
+                        type: integer
+                      databaseSize:
+                        type: string
+                      duration:
+                        type: string
+                      threads:
+                        minimum: 1
+                        type: integer
+                    required:
+                    - concurrentClients
+                    - databaseSize
+                    - duration
+                    - threads
+                    type: object
+                  type:
+                    type: string
+                required:
+                - connectionType
+                - pgbench
+                - type
+                type: object
+              bgCluster:
+                description: Reference to the BGCluster
+                type: string
+              maxRetries:
+                default: 3
+                description: Maximum number of retries for the operation
+                minimum: 0
+                type: integer
+              op:
+                description: Operation to perform (e.g., benchmark, repack, restart,
+                  vacuum)
+                enum:
+                - benchmark
+                - repack
+                - restart
+                - vacuum
+                type: string
+              repack:
+                description: Repack operation details
+                properties:
+                  tables:
+                    items:
+                      type: string
+                    type: array
+                required:
+                - tables
+                type: object
+              restart:
+                description: Restart operation details
+                properties:
+                  force:
+                    type: boolean
+                required:
+                - force
+                type: object
+              vacuum:
+                description: Vacuum operation details
+                properties:
+                  tables:
+                    items:
+                      type: string
+                    type: array
+                required:
+                - tables
+                type: object
+            required:
+            - bgCluster
+            - op
+            type: object
+          status:
+            description: BGDbOpsStatus defines the observed state of BGDbOps
+            properties:
+              retries:
+                description: Number of retries performed
+                minimum: 0
+                type: integer
+              status:
+                description: Status of the operation
+                type: string
+            required:
+            - retries
+            - status
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

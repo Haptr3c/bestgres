@@ -3,8 +3,8 @@
 # Variables
 # Binary
 BINARY_NAME=operator
-GO_FILES=$(shell find . -name '*.go')
-OUTPUT_DIR=bin
+GO_FILES=$(shell find go/. -name '*.go')
+OUTPUT_DIR=go/bin
 
 # Docker
 DOCKER_IMAGE=bestgres/operator
@@ -37,18 +37,19 @@ all: docker-build-linux generate
 # Build the binary
 build: $(GO_FILES)
 	mkdir -p $(OUTPUT_DIR)
-	cd cmd && \
+	cd go/cmd && \
 	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o ../$(OUTPUT_DIR)/$(BINARY_NAME) main.go
 
 # Build for Linux
 build-linux: $(GO_FILES)
 	mkdir -p $(OUTPUT_DIR)
-	cd cmd && \
+	cd go/cmd && \
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../$(OUTPUT_DIR)/$(BINARY_NAME)-linux-amd64 main.go
 
 # Generate code
 deepcopy:
 	@echo "Generating deepcopy code..."
+	cd go && \
 	controller-gen \
 	object:headerFile="hack/boilerplate.go.txt" \
 	paths="./..."
@@ -56,6 +57,7 @@ deepcopy:
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: deepcopy
 	@echo "Generating CRD manifests..."
+	cd go && \
 	controller-gen \
 		object:headerFile="hack/boilerplate.go.txt" \
 		crd \
@@ -65,6 +67,7 @@ manifests: deepcopy
 # Generate RBAC manifests
 rbac: deepcopy
 	@echo "Generating RBAC manifests..."
+	cd go && \
 	controller-gen \
 		rbac:roleName=bestgres-operator \
 		paths=./controllers/... \
@@ -73,30 +76,34 @@ rbac: deepcopy
 # Generate helm charts
 helm: manifests
 	@echo "Updating Helm chart version..."
-	sed -i '' 's/appVersion: .*/appVersion: $(TAG)/' deploy/helm/bestgres-operator/Chart.yaml
+	cd go && \
+	sed -i '' 's/appVersion: .*/appVersion: $(TAG)/' ./deploy/helm/bestgres-operator/Chart.yaml
 
 # Generate all manifests (CRD, RBAC, etc.)
 generate: deepcopy manifests rbac helm
 
 # Run tests
 test: $(GO_FILES)
+	cd go &&
 	go test ./... -cover
 
 # Clean up build artifacts
 clean:
-	rm -rf $(OUTPUT_DIR)
+	cd go &&
+	rm -rf go/$(OUTPUT_DIR)
 
 download:
+	cd go &&
 	go mod download
 
 # Build the Docker image
 docker-build-linux: build
-	docker buildx build --platform linux/amd64 -t $(DOCKER_IMAGE):$(TAG) . \
+	docker buildx build --platform linux/amd64 -t $(DOCKER_IMAGE):$(TAG) go/. \
 		--build-arg BUILDPLATFORM=linux/amd64
 
 # Build the Docker image
 docker-build: build
-	docker buildx build --platform $(BUILDPLATFORM) -t $(DOCKER_IMAGE):$(TAG) . \
+	docker buildx build --platform $(BUILDPLATFORM) -t $(DOCKER_IMAGE):$(TAG) go/. \
 		--build-arg BUILDPLATFORM=$(BUILDPLATFORM) 
 
 # Help message

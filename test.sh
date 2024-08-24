@@ -56,7 +56,7 @@ kubectl delete crd bgshardeddbops.bestgres.io || true
 
 make
 
-helm upgrade --install bestgres-operator deploy/helm/bestgres-operator/.
+helm upgrade --install bestgres-operator go/deploy/helm/bestgres-operator/.
 sleep 2
 # kubectl apply -f examples/bgcluster.yaml
 kubectl apply -f examples/bgshardedcluster.yaml

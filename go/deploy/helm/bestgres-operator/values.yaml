@@ -1,0 +1,10 @@
+replicaCount: 1
+
+image:
+  repository: docker.io/bestgres/operator
+  pullPolicy: IfNotPresent
+
+resources: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

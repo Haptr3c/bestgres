@@ -1,0 +1,161 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: bestgres-operator
+  namespace: '{{ .Release.Namespace }}'
+rules:
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - bestgres.io
+  resources:
+  - bgclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - bestgres.io
+  resources:
+  - bgclusters/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - bestgres.io
+  resources:
+  - bgclusters/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - bestgres.io
+  resources:
+  - bgdbops
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - bestgres.io
+  resources:
+  - bgdbops/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - bestgres.io
+  resources:
+  - bgdbops/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - bestgres.io
+  resources:
+  - bgshardedclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - bestgres.io
+  resources:
+  - bgshardedclusters/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - bestgres.io
+  resources:
+  - bgshardedclusters/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - bestgres.io
+  resources:
+  - bgshardeddbops
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - bestgres.io
+  resources:
+  - bgshardeddbops/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - bestgres.io
+  resources:
+  - bgshardeddbops/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - endpoints
+  - pods
+  - secrets
+  - serviceaccounts
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - rolebindings
+  - roles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
